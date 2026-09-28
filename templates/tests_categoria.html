@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ categoria.nombre }} | ReclutaMente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+    <script>
+        const nav = document.getElementById("navbar");
+        const onScroll = () => nav.classList.toggle("border-white/10", window.scrollY > 10);
+        window.addEventListener("scroll", onScroll);
+        onScroll();
+    </script>
+</head>
+<body class="bg-white text-zinc-900 antialiased">
+
+    {# nav #}
+    <nav id="navbar" class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/70 backdrop-blur-lg transition">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <a href="{% url 'catalogo' %}" class="flex items-center gap-3">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white" title="Logo ReclutaMente">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <path d="M12 4a2 2 0 0 1 2 2v.5a3.5 3.5 0 0 1 7 1.5c0 .9-.34 1.66-.9 2.3A4 4 0 0 1 15 14a2 2 0 0 0 2 2 3.5 3.5 0 0 1 3.5 3.5A4.5 4.5 0 0 1 12 21a4.5 4.5 0 0 1-8.5-1.5A3.5 3.5 0 0 1 7 16a2 2 0 0 0 2-2 4 4 0 0 1-5.1-3.7c-.56-.64-.9-1.4-.9-2.3A3.5 3.5 0 0 1 10 6.5V6a2 2 0 0 1 2-2Z"/>
+                        </svg>
+                    </div>
+                    <span class="text-lg font-bold tracking-wide text-white">
+                        Recluta<span class="text-indigo-400">Mente</span>
+                    </span>
+                </a>
+
+                <a href="#" class="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-white/10" title="Mi perfil">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>
+                    </svg>
+                    Mi perfil
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+
+        {# encabezado #}
+        <section class="border-t border-gray-200 bg-white py-16">
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Catálogo</p>
+                <h1 class="mt-4 text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">{{ categoria.nombre }}</h1>
+                <p class="mt-5 max-w-2xl text-lg leading-relaxed text-zinc-600">
+                    Elige una prueba, conoce su descripción y comienza a descubrir tu potencial.
+                </p>
+            </div>
+        </section>
+
+        {# Listado de Tests #}
+        <section class="border-t border-gray-200 bg-white py-16">
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <div class="grid gap-4">
+
+                    {% for test in tests %}
+                    <div class="flex flex-col items-start justify-between gap-6 rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100 sm:flex-row sm:items-center">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-8">
+                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">{{ forloop.counter|stringformat:"02d" }}</p>
+                            <div>
+                                <h2 class="text-xl font-bold text-zinc-900">{{ test.nombre }}</h2>
+                                <p class="mt-2 max-w-xl leading-relaxed text-zinc-600">{{ test.descripcion }}</p>
+                            </div>
+                        </div>
+                        <a href="#" class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                            Comenzar
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <p class="text-zinc-600">Aún no hay pruebas publicadas en esta categoría.</p>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>

@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReclutaMente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        const nav = document.getElementById("navbar");
+        const onScroll = () => nav.classList.toggle("border-gray-200", window.scrollY > 10);
+        window.addEventListener("scroll", onScroll);
+        onScroll();
+    </script>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+
+    {% include "includes/navbar.html" %}
+
+    {% block content %}{% endblock %}
+
+    {% include "includes/footer.html" %}
+
+</body>
+</html>
