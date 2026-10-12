@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- ENCABEZADO Y BOTÓN DE CREAR -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Gestión de Vacantes</h1>
+                <p class="text-sm text-gray-500">Administra todas las plazas laborales publicadas por tu empresa.</p>
+            </div>
+            
+            <a href="{% url 'empresa_crear_vacante' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                <span>➕</span> Publicar Nueva Vacante
+            </a>
+        </div>
+
+        <!-- TABLA DE VACANTES ACTIVAS -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-900">Plazas Vigentes y Activas</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-6 font-semibold">Puesto</th>
+                            <th class="py-3 px-6 font-semibold">Descripción</th>
+                            <th class="py-3 px-6 font-semibold">Ubicación</th>
+                            <th class="py-3 px-6 font-semibold">Modalidad</th>
+                            <th class="py-3 px-6 font-semibold">Vence el</th>
+                            <th class="py-3 px-6 font-semibold">Estado</th>
+                            <th class="py-3 px-6 font-semibold text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                        {% for vacante in vacantes %}
+                            <tr class="hover:bg-gray-50/50 transition">
+                                <td class="py-4 px-6 font-semibold text-gray-900">{{ vacante.nombre }}</td> 
+                                <td class="py-4 px-6 text-gray-600">{{ vacante.descripcion|truncatechars:30|default:"No especificada" }}</td>
+                                <td class="py-4 px-6 text-gray-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
+                                <td class="py-4 px-6 text-gray-600">{{ vacante.modalidad|default:"No especificada" }}</td>
+                                <td class="py-4 px-6 text-gray-600 font-medium">{{ vacante.fecha_limite|default:"Sin límite" }}</td>
+                                <td class="py-4 px-6">
+                                    <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                        Activa
+                                    </span>
+                                </td>
+                                <td class="py-4 px-6 text-center space-x-2">
+                                    <a href="{% url 'empresa_editar_vacante' vacante.id %}" class="text-xs text-indigo-600 font-medium hover:underline bg-indigo-50 px-3 py-1.5 rounded-lg">Editar</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="7" class="py-12 text-center text-gray-400 text-sm">
+                                    No hay vacantes vigentes registradas. ¡Haz clic en el botón superior para crear una!
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SECCIÓN DE HISTORIAL: PLAZAS ANTERIORES / VENCIDAS -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50 flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Historial de Plazas Anteriores</h3>
+                    <p class="text-sm text-gray-500">Registro de convocatorias cuya fecha límite ya ha expirado.</p>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-6 font-semibold">Puesto</th>
+                            <th class="py-3 px-6 font-semibold">Ubicación</th>
+                            <th class="py-3 px-6 font-semibold">Modalidad</th>
+                            <th class="py-3 px-6 font-semibold">Venció el</th>
+                            <th class="py-3 px-6 font-semibold text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                        {% for vacante in vacantes_pasadas %}
+                            <tr class="hover:bg-gray-50/50 transition opacity-75">
+                                <td class="py-4 px-6 font-semibold text-gray-900">{{ vacante.nombre }}</td>
+                                <td class="py-4 px-6 text-gray-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
+                                <td class="py-4 px-6 text-gray-600">{{ vacante.modalidad|default:"No especificada" }}</td>
+                                <td class="py-4 px-6 text-red-600 font-medium">{{ vacante.fecha_limite }}</td>
+                                <td class="py-4 px-6 text-center">
+                                    <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                        Finalizada
+                                    </span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-gray-400 text-sm">
+                                    No hay registros de plazas anteriores o vencidas.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard General - Superadmin{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-900">| DASHBOARD GENERAL</h2>
+    </div>
+
+    <!-- TARJETAS DE MÉTRICAS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Empresas -->
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Empresas Clientes</p>
+                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_empresas }}</h3>
+            </div>
+            <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl text-xl font-bold">🏢</div>
+        </div>
+
+        <!-- Profesionales / Personas -->
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Profesionales</p>
+                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_personas }}</h3>
+            </div>
+            <div class="p-3 bg-blue-50 text-blue-600 rounded-xl text-xl font-bold">👥</div>
+        </div>
+
+        <!-- Tests Disponibles -->
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pruebas Creadas</p>
+                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_tests }}</h3>
+            </div>
+            <div class="p-3 bg-green-50 text-green-600 rounded-xl text-xl font-bold">📋</div>
+        </div>
+
+        <!-- Intentos Realizados -->
+        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Intentos / Evaluaciones</p>
+                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_intentos }}</h3>
+            </div>
+            <div class="p-3 bg-yellow-50 text-yellow-600 rounded-xl text-xl font-bold">⚡</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

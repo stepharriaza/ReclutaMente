@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- ENCABEZADO DE BIENVENIDA -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    Panel Corporativo
+                </span>
+                <h1 class="text-2xl font-bold text-gray-900 mt-2">
+                    {{ empresa.nombre|default:"Mi Empresa" }}
+                </h1>
+                <p class="text-sm text-gray-500">Gestiona tus vacantes y revisa el estado de tus publicaciones.</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <a href="{% url 'empresa_crear_vacante' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center gap-2">
+                    <span>➕</span> Publicar Nueva Vacante
+                </a>
+            </div>
+        </div>
+
+        <!-- TARJETAS DE MÉTRICAS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Métrica 1 -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Vacantes Activas</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-1">{{ total_vacantes }}</h3>
+                    </div>
+                    <div class="bg-indigo-50 p-3 rounded-xl text-indigo-600 text-xl">
+                        💼
+                    </div>
+                </div>
+            </div>
+
+            <!-- Métrica 2 -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Postulantes Totales</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-1">0</h3>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-xl text-emerald-600 text-xl">
+                        👥
+                    </div>
+                </div>
+            </div>
+
+            <!-- Métrica 3 -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Estado de Cuenta</p>
+                        <h3 class="text-xl font-bold text-emerald-600 mt-2">Activo / Plan Base</h3>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-xl text-blue-600 text-xl">
+                        ⭐
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN: VACANTES RECIENTES -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900">Vacantes Publicadas Recientemente</h3>
+                <a href="{% url 'empresa_vacantes' %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition">
+                    Ver todas →
+                </a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-6 font-semibold">Puesto</th>
+                            <th class="py-3 px-6 font-semibold">Ubicación</th>
+                            <th class="py-3 px-6 font-semibold">Modalidad</th>
+                            <th class="py-3 px-6 font-semibold">Vigencia</th>
+                            <th class="py-3 px-6 font-semibold">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                    {% for vacante in vacantes_recientes %}
+                        <tr class="hover:bg-gray-50/50 transition">
+                            <td class="py-4 px-6 font-semibold text-gray-900">{{ vacante.nombre }}</td> 
+                            <td class="py-4 px-6 text-gray-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
+                            <td class="py-4 px-6 text-gray-600">{{ vacante.modalidad|default:"No especificada" }}</td>
+                            <td class="py-4 px-6 text-gray-600">{{ vacante.fecha_limite|default:"Sin límite" }}</td>
+                            <td class="py-4 px-6">
+                                <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                    Activa
+                                </span>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-8 text-center text-gray-400 text-sm">
+                                Aún no has registrado ninguna vacante corporativa. ¡Crea la primera!
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

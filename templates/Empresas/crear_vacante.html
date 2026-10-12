@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto space-y-6">
+        
+        <!-- ENCABEZADO -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Publicar Nueva Vacante</h1>
+                <p class="text-sm text-gray-500">Completa los campos para registrar una nueva plaza laboral.</p>
+            </div>
+            <a href="{% url 'empresa_vacantes' %}" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition">
+                ← Volver
+            </a>
+        </div>
+
+        <!-- FORMULARIO DE CREACIÓN -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+            <form method="POST" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <!-- Puesto -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Puesto / Título del Empleo</label>
+                        <input type="text" name="puesto" required placeholder="Ej. Desarrollador Full Stack Senior" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
+
+                    <!-- Departamento -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Departamento / Área</label>
+                        <input type="text" name="departamento" required placeholder="Ej. Ingeniería y Tecnología" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <!-- Ubicación -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Ubicación</label>
+                        <input type="text" name="ubicacion" placeholder="Ej. Ciudad de Guatemala" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
+
+                    <!-- Modalidad -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Modalidad</label>
+                        <select name="modalidad" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                            <option value="Remoto">Remoto</option>
+                            <option value="Híbrido">Híbrido</option>
+                            <option value="Presencial">Presencial</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Descripción -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Descripción y Requisitos del Puesto</label>
+                    <textarea name="descripcion" rows="5" required placeholder="Detalla las responsabilidades, tecnologías requeridas y beneficios..." class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition"></textarea>
+                </div>
+
+                <!-- BOTONES DE ACCIÓN -->
+                <div class="flex items-center justify-end gap-4 pt-4 border-t border-gray-100">
+                    <a href="{% url 'empresa_vacantes' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-xl text-sm transition">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition shadow-sm">
+                        Publicar Vacante
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Supervisión de IA - Superadmin{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-sm border border-gray-200 rounded-xl p-6">
+    <!-- ENCABEZADO Y BOTÓN DE REGRESO -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-gray-100 pb-4">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900">| GESTIÓN DE IA DE EMPRESAS CLIENTES</h2>
+            <p class="text-xs text-gray-500 mt-1">Supervisión de modelos y procesamiento inteligente para: <span class="font-semibold text-gray-700">{{ empresa.nombre }}</span></p>
+        </div>
+        
+        <!-- Botón para regresar al detalle de la empresa -->
+        <a href="{% url 'superadmin_empresa_detalle' empresa.id %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+            &larr; Volver al detalle
+        </a>
+    </div>
+
+    <!-- CUERPO DEL PANEL -->
+    <div class="border border-gray-300 rounded-xl p-6 min-h-[300px] bg-gray-50 flex items-center justify-center">
+        <div class="text-center">
+            <span class="text-4xl">🤖</span>
+            <p class="text-sm text-gray-600 mt-2 font-medium">Panel de control y supervisión de modelos de IA para esta empresa.</p>
+            <p class="text-xs text-gray-400 mt-1">Próximamente métricas en tiempo real y registros de prompts.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle del Ticket - Superadmin{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-sm border border-gray-200 rounded-xl p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900">| CATÁLOGO GENERAL DE TICKETS DE {{ ticket.empresa|default:"EMPRESA X" }}</h2>
+        </div>
+        <span class="text-sm font-medium text-gray-500">| 🔍 FILTRADO AVANZADO DE TICKETS |</span>
+    </div>
+
+    <div class="mb-6">
+        <p class="text-sm font-semibold text-gray-800 mb-3">Detalle del ticket seleccionado: [#{{ ticket.codigo|default:"0000" }}]</p>
+        
+        <!-- Caja de detalle principal según tus mockups -->
+        <div class="border border-gray-300 rounded-xl p-6 min-h-[250px] bg-gray-50 flex flex-col justify-between">
+            <div class="space-y-3 text-sm text-gray-600">
+                <p><strong>ID del Ticket:</strong> #{{ ticket.codigo|default:"0000" }}</p>
+                <p><strong>Empresa Cliente:</strong> {{ ticket.empresa|default:"Empresa X S.A." }}</p>
+                <p><strong>Prueba asociada:</strong> {{ ticket.prueba|default:"No especificada" }}</p>
+                <p><strong>Rango de fechas:</strong> {{ ticket.rango_fechas|default:"No definido" }}</p>
+                <p><strong>Estado actual:</strong> 
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        {{ ticket.estado|default:"Activo" }}
+                    </span>
+                </p>
+                <p><strong>Descripción de la prueba o solicitud:</strong> {{ ticket.descripcion|default:"Aquí se muestra toda la información detallada del ticket seleccionado, rangos de fecha y parámetros de configuración." }}</p>
+            </div>
+        </div>
+    </div>
+
+        <!-- Botones inferiores de acción corregidos y dinámicos -->
+    <div class="flex justify-between items-center pt-4 border-t border-gray-100">
+        <!-- Opción A: Botón de cancelar como formulario POST (Recomendado para acciones destructivas/cambios de estado) -->
+        <form action="{% url 'superadmin_ticket_cancelar' ticket.id %}" method="POST" class="inline">
+            {% csrf_token %}
+            <button type="submit" onclick="return confirm('¿Estás seguro de que deseas cancelar este ticket?');" class="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-medium transition border border-red-200">
+                [Cancelar ticket]
+            </button>
+        </form>
+
+        <!-- Opción B: Botón de modificar que lleva a una vista de edición -->
+        <a href="{% url 'superadmin_ticket_modificar' ticket.id %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+            [Modificar solicitud]
+        </a>
+    </div>
+</div>
+{% endblock %}

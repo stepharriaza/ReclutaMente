@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+        <h1 class="text-2xl font-bold text-gray-900 mb-2">Editar Vacante</h1>
+        <p class="text-sm text-gray-500 mb-6">Modifica los detalles de la plaza publicada.</p>
+
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Puesto</label>
+                <input type="text" name="nombre" value="{{ vacante.nombre }}" required class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                    <input type="text" name="ubicacion" value="{{ vacante.ubicacion|default:'' }}" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Modalidad</label>
+                    <select name="modalidad" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        <option value="Remoto" {% if vacante.modalidad == "Remoto" %}selected{% endif %}>Remoto</option>
+                        <option value="Presencial" {% if vacante.modalidad == "Presencial" %}selected{% endif %}>Presencial</option>
+                        <option value="Híbrido" {% if vacante.modalidad == "Híbrido" %}selected{% endif %}>Híbrido</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Límite</label>
+                    <!-- Usamos el filtro date:'Y-m-d' para que el input tipo date reconozca la fecha guardada -->
+                    <input type="date" name="fecha_limite" value="{{ vacante.fecha_limite|date:'Y-m-d' }}" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea name="descripcion" rows="4" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">{{ vacante.descripcion }}</textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Requisitos</label>
+                <textarea name="requisitos" rows="3" class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">{{ vacante.requisitos }}</textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                <a href="{% url 'empresa_vacantes' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-xl text-sm transition">Cancelar</a>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition shadow-sm">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

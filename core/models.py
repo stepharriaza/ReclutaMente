@@ -1,6 +1,87 @@
 from decimal import Decimal
-
 from django.db import models
+from django.utils import timezone
+
+
+class Ticket(models.Model):
+    ESTADOS = (
+        ('Abierto', 'Abierto'),
+        ('En proceso', 'En proceso'),
+        ('Resuelto', 'Resuelto'),
+    )
+    
+    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name="tickets")
+    asunto = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    estado = models.CharField(max_length=20, choices=ESTADOS, default='Abierto')
+    respuesta_admin = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Ticket #{self.id} - {self.asunto}"
+
+class Plaza(models.Model):
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True)
+    requisitos = models.TextField(blank=True)
+    ubicacion = models.CharField(max_length=150, blank=True, null=True)
+    modalidad = models.CharField(max_length=50, blank=True, null=True)
+    fecha_limite = models.DateField(blank=True, null=True)
+    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name="plazas")
+
+    def __str__(self):
+        return self.nombre
+
+    @property
+    def esta_vencida(self):
+        if self.fecha_limite:
+            return self.fecha_limite < timezone.now().date()
+        return False
+
+class Bitacora(models.Model):
+    fecha_hora = models.DateTimeField(auto_now_add=True)
+    usuario = models.CharField(max_length=150)
+    accion = models.CharField(max_length=255)
+    modulo = models.CharField(max_length=150)
+
+    def __str__(self):
+        return f"{self.usuario} - {self.accion} ({self.fecha_hora})"
+
+class Ticket(models.Model):
+    TIPO_TICKET = (
+        ('Soporte General', 'Soporte General'),
+        ('Modificación de Prueba', 'Modificación de Prueba'),
+        ('Chequeo de Plataforma', 'Chequeo de Plataforma'),
+        ('Chequeo de Agente', 'Chequeo de Agente'),
+    )
+
+    DESTINO_MODIFICACION = (
+        ('Sistema', 'Sistema'),
+        ('Agente', 'Agente'),
+        ('Plataforma General', 'Plataforma General'),
+        ('N/A', 'No aplica'),
+    )
+
+    ESTADOS = (
+        ('Abierto', 'Abierto'),
+        ('En proceso', 'En proceso'),
+        ('Resuelto', 'Resuelto'),
+    )
+
+    codigo = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name="tickets", blank=True, null=True)
+    tipo = models.CharField(max_length=50, choices=TIPO_TICKET, default='Soporte General')
+    asunto = models.CharField(max_length=200, blank=True, null=True)
+    prueba = models.CharField(max_length=150, blank=True, null=True)
+    destino = models.CharField(max_length=50, choices=DESTINO_MODIFICACION, default='N/A')
+    rango_fechas = models.CharField(max_length=100, blank=True, null=True)
+    descripcion = models.TextField(blank=True, null=True)
+    estado = models.CharField(max_length=50, choices=ESTADOS, default='Abierto')
+    respuesta_admin = models.TextField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Ticket #{self.codigo or self.id} - [{self.tipo}] {self.asunto or self.prueba}"
 
 
 class EstadoTest(models.TextChoices):
@@ -53,6 +134,7 @@ class Empresa(models.Model):
     plan = models.CharField(max_length=50, blank=True)
     telefono = models.CharField(max_length=20, blank=True)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    estado = models.CharField(max_length=20, default='Activa') # <--- Agrege esta línea Katty
 
     def __str__(self):
         return self.nombre
@@ -95,16 +177,6 @@ class Pregunta(models.Model):
 
     def __str__(self):
         return self.texto_pregunta[:50]
-
-
-class Plaza(models.Model):
-    nombre = models.CharField(max_length=200)
-    descripcion = models.TextField(blank=True)
-    requisitos = models.TextField(blank=True)
-    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="plazas")
-
-    def __str__(self):
-        return self.nombre
 
 
 class Convocatoria(models.Model):

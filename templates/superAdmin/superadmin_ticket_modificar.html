@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Modificar Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6 px-4">
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        
+        <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <h2 class="font-semibold text-lg flex items-center space-x-2">
+                <span>✏️</span>
+                <span>Modificar Ticket #{{ ticket.id }}</span>
+            </h2>
+            <a href="{% url 'superadmin_tickets' %}" class="text-sm bg-indigo-700 hover:bg-indigo-800 px-3 py-1.5 rounded-lg transition">
+                ← Volver a Tickets
+            </a>
+        </div>
+
+        <form method="POST" action="{% url 'superadmin_ticket_modificar' ticket.pk %}" class="p-6 space-y-5">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                    <input type="text" value="{{ ticket.empresa.nombre|default:'N/A' }}" disabled
+                           class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select name="estado" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                        <option value="Abierto" {% if ticket.estado == 'Abierto' %}selected{% endif %}>Abierto</option>
+                        <option value="En proceso" {% if ticket.estado == 'En proceso' %}selected{% endif %}>En proceso</option>
+                        <option value="Resuelto" {% if ticket.estado == 'Resuelto' %}selected{% endif %}>Resuelto</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Asunto</label>
+                <input type="text" value="{{ ticket.asunto }}" disabled
+                       class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 cursor-not-allowed">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Mensaje de la Empresa</label>
+                <textarea disabled rows="3"
+                          class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 cursor-not-allowed">{{ ticket.mensaje }}</textarea>
+            </div>
+
+            <div class="pt-2 border-t border-gray-100">
+                <label class="block text-sm font-semibold text-indigo-900 mb-1">Respuesta del Administrador</label>
+                <p class="text-xs text-gray-500 mb-2">Escribe las indicaciones o solución para que la empresa pueda visualizarla en su panel.</p>
+                <textarea name="respuesta_admin" rows="4" placeholder="Escribe tu respuesta aquí..."
+                          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ ticket.respuesta_admin|default:'' }}</textarea>
+            </div>
+
+            <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+                <a href="{% url 'superadmin_tickets' %}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition">
+                    Cancelar
+                </a>
+                <button type="submit" class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition shadow-sm">
+                    Guardar Cambios
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}

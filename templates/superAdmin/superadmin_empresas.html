@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Empresas - Superadmin{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-sm border border-gray-200 rounded-xl p-6">
+    <!-- CABECERA Y BOTONES -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900">| GESTIÓN DE EMPRESAS CLIENTES</h2>
+        </div>
+        <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
+            <!-- BOTÓN QUE ABRE EL MODAL -->
+            <button onclick="abrirModalEmpresa()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                + Crear nueva empresa
+            </button>
+            
+            <!-- BOTÓN QUE DESPLIEGA EL FILTRADO -->
+            <button type="button" onclick="toggleFiltrosEmpresas()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-gray-300">
+                <span>🔍 FILTRADO AVANZADO</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DESPLEGABLE DEL FORMULARIO DE FILTROS -->
+    <div id="filtro-empresas-container" class="{% if nombre_filtro or plan_filtro %}block{% else %}hidden{% endif %} mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg transition-all">
+        <form method="GET" action="" class="flex flex-wrap items-center gap-3">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre de empresa</label>
+                <input type="text" name="nombre" value="{{ nombre_filtro }}" placeholder="Buscar por empresa..." 
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Plan contratado</label>
+                <input type="text" name="plan" value="{{ plan_filtro }}" placeholder="Buscar por plan..." 
+                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+            </div>
+            <div class="flex items-end gap-2 mt-auto pt-2 sm:pt-0">
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
+                    Aplicar filtros
+                </button>
+                <a href="" class="bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition flex items-center">
+                    Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- TABLA DE EMPRESAS -->
+    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Empresa</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Plan contratado</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Consumo mensual</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Botones</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for empresa in empresas %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ empresa.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ empresa.nombre }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ empresa.plan }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ empresa.plazas.count }} plazas</td>
+                    
+                    <!-- ESTADO DINÁMICO -->
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if empresa.estado == 'Inactivo' %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                Inactivo
+                            </span>
+                        {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Activo
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <a href="{% url 'superadmin_empresa_detalle' empresa.id %}" class="text-indigo-600 hover:text-indigo-900">Ver</a>
+                        <a href="{% url 'superadmin_empresa_editar' empresa.id %}" class="text-yellow-600 hover:text-yellow-900">Editar</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-sm text-gray-400">
+                        No hay empresas registradas con los filtros aplicados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL PARA CREAR NUEVA EMPRESA -->
+<div id="modal-crear-empresa" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-900">Crear Nueva Empresa Cliente</h3>
+            <button onclick="cerrarModalEmpresa()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+        </div>
+        
+        <form method="POST" action="{% url 'superadmin_empresas' %}">
+            {% csrf_token %}
+            
+            <!-- SECCIÓN: DATOS DE LA EMPRESA -->
+            <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Datos de la Empresa</p>
+            
+            <div class="mb-3">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre de la empresa</label>
+                <input type="text" name="nombre" required placeholder="Ej. Innovaciones S.A." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Plan contratado</label>
+                <select name="plan" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                    <option value="" disabled selected>Seleccione un plan...</option>
+                    <option value="Básico">Básico</option>
+                    <option value="Profesional">Profesional</option>
+                    <option value="Corporativo">Corporativo</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label>
+                <input type="tel" name="telefono" required placeholder="Ej. 24567890 o 55123456" pattern="[0-9\s\-]{8,}" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <!-- SECCIÓN: ACCESO DEL ADMINISTRADOR DE LA EMPRESA -->
+            <hr class="my-3 border-gray-200">
+            <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Administrador de la Empresa</p>
+
+            <div class="mb-3">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre de usuario (Admin)</label>
+                <input type="text" name="nombre_usuario" required placeholder="Ej. admin_innovaciones" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Correo electrónico</label>
+                <input type="email" name="email_admin" required placeholder="Ej. admin@innovaciones.com" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-gray-600 mb-1">Contraseña temporal</label>
+                <input type="password" name="contrasena_admin" required placeholder="••••••••" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <button type="button" onclick="cerrarModalEmpresa()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                    Cancelar
+                </button>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SCRIPTS DE INTERACCIÓN -->
+<script>
+function toggleFiltrosEmpresas() {
+    const container = document.getElementById('filtro-empresas-container');
+    container.classList.toggle('hidden');
+    container.classList.toggle('block');
+}
+
+function abrirModalEmpresa() {
+    document.getElementById('modal-crear-empresa').classList.remove('hidden');
+}
+
+function cerrarModalEmpresa() {
+    document.getElementById('modal-crear-empresa').classList.add('hidden');
+}
+</script>
+{% endblock %}
