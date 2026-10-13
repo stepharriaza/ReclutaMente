@@ -2,7 +2,7 @@ from django.db import models
 from django.http import request
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render, redirect
-from core.models import Plaza, Empresa, Ticket, Persona, Usuario
+from core.models import Plaza, Empresa, Ticket, Persona, Usuario, PruebaGeneradaEmpresa
 from django.contrib.auth import  logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
@@ -18,11 +18,164 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth import authenticate 
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from google import genai
+from django.conf import settings
+from django.http import JsonResponse
+import json
 
 
+def api_agente_interactivo(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            mensaje = data.get('mensaje', '')
+            
+            if not mensaje:
+                return JsonResponse({'error': 'El mensaje está vacío.'}, status=400)
+            
+            # Prompt optimizado para que devuelva un formato estructurado o JSON limpio
+            prompt = f"""
+            Eres el agente interactivo de la plataforma ReclutaMente. El usuario dice: "{mensaje}".
+            Si el usuario te pide explícitamente crear una prueba o rellenar un campo, responde estrictamente en formato JSON con estas llaves exactas (sin texto extra fuera del JSON):
+            {{"accion": "crear_prueba", "puesto": "nombre detectado", "criterios": "criterios detectados", "respuesta_texto": "Mensaje para el usuario"}}
+            Si es una consulta normal de chat o soporte, responde con este formato JSON:
+            {{"accion": "chat", "respuesta_texto": "Tu respuesta aquí"}}
+            """
+            
+            # ¡Usamos tu función de respaldo segura en lugar de llamar directo al cliente!
+            respuesta_cruda = generar_contenido_seguro(prompt)
+            
+            # Limpiamos el texto por si Gemini incluye bloques de código markdown
+            texto_limpio = respuesta_cruda.replace('```json', '').replace('```', '').strip()
+            
+            try:
+                datos_json = json.loads(texto_limpio)
+            except json.JSONDecodeError:
+                # Si Gemini no devolvió un JSON perfecto, lo envolvemos como chat normal
+                datos_json = {'accion': 'chat', 'respuesta_texto': respuesta_cruda}
+            
+            return JsonResponse(datos_json)
+            
+        except Exception as e:
+            return JsonResponse({'accion': 'chat', 'respuesta_texto': f"Error en el servidor de IA: {str(e)}"})
+            
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 
+import time
 
+def generar_contenido_seguro(prompt_texto):
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    
+    modelos_disponibles = [
+        'gemini-2.0-flash',
+        'gemini-flash-latest',
+    ]
+    
+    intentos_maximos = 3
+    ultimo_error = None
+    
+    for modelo in modelos_disponibles:
+        for intento in range(intentos_maximos):
+            try:
+                response = client.models.generate_content(
+                    model=modelo,
+                    contents=prompt_texto,
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                ultimo_error = str(e)
+                # Si el error es por saturación (503), esperamos unos segundos antes de reintentar
+                if '503' in str(e) or 'UNAVAILABLE' in str(e):
+                    time.sleep(2 * (intento + 1)) # Espera progresiva: 2s, 4s, 6s...
+                    continue
+                break # Si es otro tipo de error, salta al siguiente modelo
+                
+    raise Exception(f"No se pudo conectar tras varios reintentos. Último error: {ultimo_error}")
+
+
+def api_crear_prueba_ia(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            puesto = data.get('puesto', '')
+            criterios = data.get('criterios', '')
+            
+            if not puesto or not criterios:
+                return JsonResponse({'error': 'El puesto y los criterios son obligatorios.'}, status=400)
+            
+            empresa_obj = Empresa.objects.get(usuario=request.user)
+            
+            prompt = f"""
+            Eres el experto en diseño de talento humano y psicometría de la plataforma ReclutaMente.
+            La empresa '{empresa_obj.nombre}' solicita crear una prueba o evaluación personalizada a la medida para el puesto de: '{puesto}'.
+            Los requerimientos clave y competencias indispensables que la empresa desea evaluar son: {criterios}.
+            
+            Genera una prueba profesional y estructurada con instrucciones, casos prácticos y guía de respuestas en Markdown.
+            """
+            
+            # ¡Llamamos a nuestra función blindada que maneja los modelos y reintentos solos!
+            contenido_generado = generar_contenido_seguro(prompt)
+            
+            nueva_prueba = PruebaGeneradaEmpresa.objects.create(
+                empresa=empresa_obj,
+                puesto=puesto,
+                criterios_requeridos=criterios,
+                contenido_prueba=contenido_generado
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': '¡Prueba generada y guardada con éxito!',
+                'id_prueba': nueva_prueba.id,
+                'contenido': contenido_generado
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+            
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+def api_agente_ia(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            mensaje_usuario = data.get('mensaje', '')
+            
+            if not mensaje_usuario:
+                return JsonResponse({'error': 'El mensaje está vacío.'}, status=400)
+            
+            prompt = f"Actúa como un asistente virtual experto en reclutamiento y soporte para la plataforma ReclutaMente. Responde de forma clara y profesional: {mensaje_usuario}"
+            
+            respuesta_texto = generar_contenido_seguro(prompt)
+            
+            return JsonResponse({'respuesta': respuesta_texto})
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+            
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+def agente_ia_analisis(request):
+    resultado_ia = None
+    texto_usuario = ""
+    
+    if request.method == 'POST':
+        texto_usuario = request.POST.get('texto_a_analizar', '')
+        
+        if texto_usuario:
+            try:
+                prompt = f"Actúa como un experto en recursos humanos y reclutamiento de personal. Analiza el siguiente perfil o texto y da recomendaciones clave: {texto_usuario}"
+                resultado_ia = generar_contenido_seguro(prompt)
+            except Exception as e:
+                resultado_ia = f"Ocurrió un error al comunicarse con la IA: {e}"
+                
+    return render(request, 'superAdmin/agente_ia.html', {
+        'resultado_ia': resultado_ia,
+        'texto_usuario': texto_usuario
+    })
 
 
 @login_required(login_url='login')

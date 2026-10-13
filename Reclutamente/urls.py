@@ -34,4 +34,8 @@ urlpatterns = [
     path('empresa/perfil/', views.empresa_perfil, name='empresa_perfil'),
     path('empresa/vacantes/editar/<int:pk>/', views.empresa_editar_vacante, name='empresa_editar_vacante'),
     path('empresa/soporte/', views.empresa_tickets, name='empresa_tickets'),
+    # --- Agente de IA ---
+    path('api/agente-ia/', views.api_agente_ia, name='api_agente_ia'),
+    path('api/crear-prueba-ia/', views.api_crear_prueba_ia, name='api_crear_prueba_ia'),
+
     ]

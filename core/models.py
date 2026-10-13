@@ -258,3 +258,14 @@ class Certificado(models.Model):
 
     def __str__(self):
         return self.codigo_verificacion
+
+
+class PruebaGeneradaEmpresa(models.Model):
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name="pruebas_ia")
+    puesto = models.CharField(max_length=200)
+    criterios_requeridos = models.TextField(help_text="Ej: Liderazgo, analítico, estadísticas")
+    contenido_prueba = models.TextField(help_text="Contenido de la prueba redactado por la IA")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Prueba para {self.puesto} - {self.empresa.nombre}"
