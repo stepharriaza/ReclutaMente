@@ -12,16 +12,54 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from core.models import Categoria, EstadoTest, Test, Intento
+from core.models import Certificado, EstadoIntento
 from django.db.models import Q
 from core.models import Bitacora
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import authenticate 
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from google import genai
-from django.conf import settings
-from django.http import JsonResponse
-import json
+from core.decorators import solo_profesional, solo_empresa, solo_superadmin, get_recluta_user
+
+def _get_usuario_recluta(request):
+    """Devuelve el objeto Usuario.recluta según el usuario autenticado."""
+    if not request.user.is_authenticated:
+        return None
+    user = Usuario.objects.filter(nombre_usuario=request.user.username).first()
+    if not user:
+        user = Usuario.objects.filter(email=request.user.email).first()
+    return user
+
+
+
+def _get_persona_for_user(user):
+    if not user:
+        return None
+    return Persona.objects.filter(usuario=user).first()
+
+
+def _get_empresa_for_user(user):
+    if not user:
+        return None
+    return Empresa.objects.filter(usuario=user).first()
+    """Devuelve el objeto Usuario.recluta según el usuario autenticado."""
+    if not request.user.is_authenticated:
+        return None
+    user = Usuario.objects.filter(nombre_usuario=request.user.username).first()
+    if not user:
+        user = Usuario.objects.filter(email=request.user.email).first()
+    return user
+
+
+def _get_persona_for_user(user):
+    if not user:
+        return None
+    return Persona.objects.filter(usuario=user).first()
+
+
+def _get_empresa_for_user(user):
+    if not user:
+        return None
+    return Empresa.objects.filter(usuario=user).first()
 
 
 def api_agente_interactivo(request):
@@ -607,6 +645,17 @@ def tests_categoria(request, categoria_id):
     tests = Test.objects.filter(categoria=categoria, estado=EstadoTest.PUBLICADO)
     return render(request, "tests_categoria.html", {"categoria": categoria, "tests": tests})
 
+def test(request, test_id):
+    test_obj = get_object_or_404(Test, id=test_id, estado=EstadoTest.PUBLICADO)
+    preguntas = test_obj.preguntas.order_by('fila', 'id')
+
+    primera = preguntas.first()
+    es_razonamiento = primera is not None and primera.texto_pregunta.strip().lower().endswith(('.png', '.jpg', '.jpeg'))
+    if es_razonamiento:
+        return render(request, "test_razonamiento.html", {"test": test_obj, "preguntas": preguntas})
+
+    return render(request, "test.html", {"test": test_obj, "preguntas": preguntas})
+
 
 
 
@@ -647,38 +696,41 @@ def login_view(request):
     if request.method == 'POST':
         username_ingresado = request.POST.get('username')
         password_ingresada = request.POST.get('password')
-        
-        print(f"--- INTENTO DE LOGIN --- Usuario: {username_ingresado}, Password: {password_ingresada}")
-        
+
         try:
-            # Buscamos directamente en el modelo Usuario
             usuario_obj = Usuario.objects.filter(nombre_usuario=username_ingresado, contrasena=password_ingresada).first()
-            
-            if usuario_obj:
-                print(f"¡Usuario encontrado en la BD!: {usuario_obj.nombre_usuario}")
-                
-                from django.contrib.auth.models import User
-                django_user, created = User.objects.get_or_create(username=usuario_obj.nombre_usuario)
-                django_user.backend = 'django.contrib.auth.backends.ModelBackend'
-                auth_login(request, django_user)
-                
-                # Verificamos si es empresa
-                es_empresa = Empresa.objects.filter(usuario=usuario_obj).exists() or \
-                             Empresa.objects.filter(usuario__nombre_usuario=usuario_obj.nombre_usuario).exists()
-                
-                print(f"¿Es empresa?: {es_empresa}")
-                
-                if es_empresa:
-                    return redirect('empresa_dashboard')
-                else:
-                    return redirect('superadmin_dashboard') 
-            else:
-                print("❌ Credenciales inválidas: No se encontró el usuario con esa contraseña.")
+            if not usuario_obj:
                 messages.error(request, 'Usuario o contraseña incorrectos.')
+                return render(request, 'login.html')
+
+            from django.contrib.auth.models import User
+            django_user, _ = User.objects.get_or_create(username=usuario_obj.nombre_usuario)
+            django_user.backend = 'django.contrib.auth.backends.ModelBackend'
+            auth_login(request, django_user)
+
+            rol = getattr(usuario_obj, 'rol', None)
+
+            if rol == 'superadmin':
+                return redirect('superadmin_dashboard')
+            if rol == 'empresa':
+                return redirect('empresa_dashboard')
+            if rol == 'profesional':
+                return redirect('home_profesionales')
+
+            # Fallback por si hay cuentas antiguas sin rol
+            if Empresa.objects.filter(usuario=usuario_obj).exists():
+                return redirect('empresa_dashboard')
+            if Persona.objects.filter(usuario=usuario_obj).exists():
+                return redirect('home_profesionales')
+
+            messages.error(request, 'No se pudo determinar el tipo de cuenta.')
+            return redirect('login')
+
         except Exception as e:
             print("--- ERROR CRÍTICO EN LOGIN ---", e)
             messages.error(request, 'Ocurrió un error al iniciar sesión.')
-            
+            return render(request, 'login.html')
+
     return render(request, 'login.html')
 
 
@@ -687,9 +739,51 @@ def logout_view(request):
     return redirect('login')
 
 def registro_view(request):
-        if request.method == 'POST':
-            return redirect('dashboard_general')
-        return render(request, 'registro.html')
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+
+        if not username or not email or not password:
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'registro.html')
+
+        if Usuario.objects.filter(nombre_usuario=username).exists():
+            messages.error(request, 'Ese nombre de usuario ya está en uso.')
+            return render(request, 'registro.html')
+
+        if Usuario.objects.filter(email=email).exists():
+            messages.error(request, 'Ese correo ya está registrado.')
+            return render(request, 'registro.html')
+
+        try:
+            usuario = Usuario.objects.create(
+                nombre_usuario=username,
+                email=email,
+                contrasena=password,
+                rol='profesional'
+            )
+
+            Persona.objects.create(
+                nombre=username,
+                email=email,
+                usuario=usuario
+            )
+
+            from django.contrib.auth.models import User
+            django_user, creado = User.objects.get_or_create(username=username)
+            django_user.backend = 'django.contrib.auth.backends.ModelBackend'
+            auth_login(request, django_user)
+
+            messages.success(request, '¡Cuenta creada correctamente! Bienvenido a ReclutaMente.')
+            return redirect('home_profesionales')
+
+        except Exception as e:
+            print("--- ERROR EN REGISTRO ---", e)
+            messages.error(request, 'Ocurrió un error al crear la cuenta. Intenta nuevamente.')
+            return render(request, 'registro.html')
+
+    return render(request, 'registro.html')
 
 # Vistas principales (SIN decoradores restrictivos por ahora)
 def dashboard_general(request):
@@ -896,3 +990,71 @@ def superadmin_ticket_modificar(request, pk):
         return redirect('superadmin_tickets')
         
     return render(request, 'superAdmin/superadmin_ticket_modificar.html', {'ticket': ticket})
+
+
+@solo_profesional
+def home_profesionales(request):
+    usuario = get_recluta_user(request)
+    if not usuario:
+        return redirect('login')
+    if _get_empresa_for_user(usuario):
+        return redirect('empresa_dashboard')
+    persona = _get_persona_for_user(usuario)
+    if not persona:
+        messages.error(request, 'No tienes un perfil de profesional asociado a esta cuenta.')
+        return redirect('login')
+    intentos = []
+    certificaciones = []
+    try:
+        intentos = list(persona.intentos.select_related('test','test__categoria').order_by('-fecha'))
+    except Exception as e:
+        print("--- ERROR EN PANEL DEL PROFESIONAL ---", e)
+    try:
+        certificaciones = Certificado.objects.filter(intento__persona=persona).select_related('intento','intento__test','intento__test__categoria')
+    except Exception as e:
+        print("--- ERROR AL OBTENER CERTIFICACIONES ---", e)
+    total_completadas = sum(1 for i in intentos if i.estado == EstadoIntento.COMPLETADO)
+    total_en_progreso = sum(1 for i in intentos if i.estado in (EstadoIntento.EN_PROGRESO, EstadoIntento.INICIADO))
+    context = {'persona': persona, 'certificaciones': certificaciones, 'intentos': intentos, 'categorias': Categoria.objects.all(), 'total_certificaciones': len(certificaciones), 'total_completadas': total_completadas, 'total_en_progreso': total_en_progreso}
+    return render(request, 'Profesionales/home_profesionales.html', context)
+
+
+@solo_profesional
+def profesional_perfil(request):
+    usuario = get_recluta_user(request)
+    if not usuario:
+        return redirect('login')
+    empresa = _get_empresa_for_user(usuario)
+    if empresa:
+        return redirect('empresa_dashboard')
+    persona = _get_persona_for_user(usuario)
+    intentos = []
+    certificaciones = []
+
+    if not persona:
+        messages.error(request, 'No tienes un perfil de profesional asociado a esta cuenta.')
+        return redirect('login')
+
+    try:
+        intentos = list(
+            persona.intentos.select_related('test', 'test__categoria').order_by('-fecha')
+        )
+        certificaciones = Certificado.objects.filter(intento__persona=persona).select_related(
+            'intento', 'intento__test', 'intento__test__categoria'
+        )
+    except Exception as e:
+        print("--- ERROR EN PERFIL DEL PROFESIONAL ---", e)
+        intentos = []
+        certificaciones = []
+
+    total_completadas = sum(1 for i in intentos if i.estado == EstadoIntento.COMPLETADO)
+    total_en_progreso = sum(1 for i in intentos if i.estado in (EstadoIntento.EN_PROGRESO, EstadoIntento.INICIADO))
+
+    context = {
+        'persona': persona,
+        'certificaciones': certificaciones,
+        'total_certificaciones': len(certificaciones),
+        'total_completadas': total_completadas,
+        'total_en_progreso': total_en_progreso,
+    }
+    return render(request, 'Profesionales/perfil.html', context)

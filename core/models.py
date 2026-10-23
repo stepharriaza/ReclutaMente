@@ -111,12 +111,22 @@ class EstadoIntento(models.TextChoices):
 
 
 class Usuario(models.Model):
+    ROL_CHOICES = (
+        ('profesional', 'Profesional'),
+        ('empresa', 'Empresa'),
+        ('superadmin', 'Superadmin'),
+    )
+
     nombre_usuario = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     contrasena = models.CharField(max_length=255)
+    rol = models.CharField(max_length=20, choices=ROL_CHOICES, null=True, blank=True)
 
     def __str__(self):
         return self.nombre_usuario
+    
+    class Meta:
+        db_table = 'core_usuario'
 
 
 class Persona(models.Model):
@@ -169,11 +179,14 @@ class Test(models.Model):
 
 
 class Pregunta(models.Model):
+    id = models.AutoField(primary_key=True, db_column="id_pregunta")
     texto_pregunta = models.TextField()
-    tipo = models.CharField(max_length=30, blank=True)
     dimension = models.CharField(max_length=100, blank=True)
-    peso = models.DecimalField(max_digits=5, decimal_places=3, default=Decimal("1.0"))
-    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="preguntas")
+    fila = models.PositiveIntegerField(null=True, blank=True)
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="preguntas", db_column="id_test")
+
+    class Meta:
+        db_table = "pregunta"
 
     def __str__(self):
         return self.texto_pregunta[:50]

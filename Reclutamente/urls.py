@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('catalogo/', views.catalogo, name='catalogo'),
     path('catalogo/<int:categoria_id>/', views.tests_categoria, name='tests_categoria'),
+    path('test/<int:test_id>/', views.test, name='test'),
 
     path('registro/', views.registro_view, name='registro'),
     path('logout/', views.logout_view, name='logout'),
@@ -37,5 +38,9 @@ urlpatterns = [
     # --- Agente de IA ---
     path('api/agente-ia/', views.api_agente_ia, name='api_agente_ia'),
     path('api/crear-prueba-ia/', views.api_crear_prueba_ia, name='api_crear_prueba_ia'),
+
+    # --- VISTA DEL PROFESIONAL ---
+    path('profesional/', views.home_profesionales, name='home_profesionales'),
+    path('profesional/perfil/', views.profesional_perfil, name='profesional_perfil'),
 
     ]
