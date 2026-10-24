@@ -39,23 +39,18 @@ def rol_requerido(*roles):
                     usuario.rol = 'superadmin'
                     usuario.save(update_fields=['rol'])
                 else:
-                    # Si realmente no se puede determinar, NO lo mandamos con ese mensaje
-                    # Lo mandamos al login sin el texto "no tiene un rol asignado"
+                    # si no se identifica
                     messages.error(request, 'No se pudo identificar tu rol. Contacta al administrador.')
                     return redirect('login')
 
             # Si el rol no coincide con el permitido para esta vista
             if rol not in roles:
                 if rol == 'profesional':
-                    messages.error(request, 'No tienes permiso para acceder a esa sección.')
                     return redirect('home_profesionales')
                 elif rol == 'empresa':
-                    messages.error(request, 'No tienes permiso para acceder a esa sección.')
                     return redirect('empresa_dashboard')
                 elif rol == 'superadmin':
-                    messages.error(request, 'No tienes permiso para acceder a esa sección.')
                     return redirect('superadmin_dashboard')
-                messages.error(request, 'No tienes permiso para acceder a esa sección.')
                 return redirect('login')
 
             return view_func(request, *args, **kwargs)

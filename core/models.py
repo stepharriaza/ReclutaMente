@@ -121,6 +121,7 @@ class Usuario(models.Model):
     email = models.EmailField(unique=True)
     contrasena = models.CharField(max_length=255)
     rol = models.CharField(max_length=20, choices=ROL_CHOICES, null=True, blank=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
         return self.nombre_usuario

@@ -3,6 +3,23 @@
 {% block title %}Dashboard General - Superadmin{% endblock %}
 
 {% block content %}
+
+<section class="relative overflow-hidden bg-indigo-950 text-white">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+                <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+                <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
+            </div>
+
+            <div class="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Panel de SuperAdmin</p>
+                <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+                    Te damos la bienvenida {{ request.user.username }}
+                </h1>
+
+            </div>
+        </section>
+
 <div class="space-y-6">
     <div>
         <h2 class="text-2xl font-bold text-gray-900">| DASHBOARD GENERAL</h2>

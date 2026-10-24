@@ -740,11 +740,13 @@ def logout_view(request):
 
 def registro_view(request):
     if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
+        confirm_password = request.POST.get('confirm_password', '')
 
-        if not username or not email or not password:
+        if not nombre or not username or not email or not password:
             messages.error(request, 'Todos los campos son obligatorios.')
             return render(request, 'registro.html')
 
@@ -756,6 +758,10 @@ def registro_view(request):
             messages.error(request, 'Ese correo ya está registrado.')
             return render(request, 'registro.html')
 
+        if password != confirm_password:
+            messages.error(request, 'Las contraseñas no coinciden.')
+            return render(request, 'registro.html')
+
         try:
             usuario = Usuario.objects.create(
                 nombre_usuario=username,
@@ -765,7 +771,7 @@ def registro_view(request):
             )
 
             Persona.objects.create(
-                nombre=username,
+                nombre=nombre,
                 email=email,
                 usuario=usuario
             )
