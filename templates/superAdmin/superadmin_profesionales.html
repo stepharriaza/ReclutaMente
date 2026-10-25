@@ -53,11 +53,14 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Nombre profesional</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Usuario</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Estado</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Prueba realizada</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Consumo mensual</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Puntuación</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Pago</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Certificado</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Acciones</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -65,6 +68,16 @@
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ profesional.id }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ profesional.nombre }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ profesional.usuario.nombre_usuario|default:"Sin usuario" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if profesional.usuario and profesional.usuario.activo %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
+                        {% elif profesional.usuario %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Sin cuenta</span>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {% with ultimo_intento=profesional.intentos.last %}
                             {{ ultimo_intento.test.nombre|default:"Sin prueba" }}
@@ -86,10 +99,24 @@
                             {% endif %}
                         {% endwith %}
                     </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if profesional.usuario %}
+                            <form method="post" action="{% url 'superadmin_toggle_profesional' profesional.id %}">
+                                {% csrf_token %}
+                                {% if profesional.usuario.activo %}
+                                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium">Desactivar</button>
+                                {% else %}
+                                    <button type="submit" class="text-green-600 hover:text-green-800 font-medium">Activar</button>
+                                {% endif %}
+                            </form>
+                        {% else %}
+                            <span class="text-gray-400">N/A</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-400">No se encontraron profesionales con los filtros aplicados.</td>
+                    <td colspan="10" class="px-6 py-12 text-center text-sm text-gray-400">No se encontraron profesionales con los filtros aplicados.</td>
                 </tr>
                 {% endfor %}
             </tbody>

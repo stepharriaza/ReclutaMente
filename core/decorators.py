@@ -22,9 +22,12 @@ def rol_requerido(*roles):
                 messages.error(request, 'Debes iniciar sesión para acceder a esta sección.')
                 return redirect('login')
 
+            if not usuario.activo:
+                messages.error(request, 'Tu cuenta está desactivada. Contacta al administrador.')
+                return redirect('login')
+
             rol = getattr(usuario, 'rol', None)
 
-            # Si no tiene rol, intentar inferirlo desde Persona o Empresa
             if not rol:
                 if Persona.objects.filter(usuario=usuario).exists():
                     rol = 'profesional'
@@ -39,12 +42,9 @@ def rol_requerido(*roles):
                     usuario.rol = 'superadmin'
                     usuario.save(update_fields=['rol'])
                 else:
-                    # Si realmente no se puede determinar, NO lo mandamos con ese mensaje
-                    # Lo mandamos al login sin el texto "no tiene un rol asignado"
                     messages.error(request, 'No se pudo identificar tu rol. Contacta al administrador.')
                     return redirect('login')
 
-            # Si el rol no coincide con el permitido para esta vista
             if rol not in roles:
                 if rol == 'profesional':
                     messages.error(request, 'No tienes permiso para acceder a esa sección.')

@@ -3,7 +3,7 @@ from django.http import request
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render, redirect
 from core.models import Plaza, Empresa, Ticket, Persona, Usuario, PruebaGeneradaEmpresa
-from django.contrib.auth import  logout
+from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
 from core.serializers import EmpresaSerializer  
@@ -18,48 +18,87 @@ from core.models import Bitacora
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import authenticate 
 from django.contrib.auth.decorators import login_required
-from core.decorators import solo_profesional, solo_empresa, solo_superadmin, get_recluta_user
+from django.utils import timezone
+from google import genai
+from django.conf import settings
+from django.http import JsonResponse
+import json
+from core.decorators import (
+    solo_profesional,
+    solo_empresa,
+    solo_superadmin,
+    get_recluta_user,
+    )
+from core.services import (
+    evaluar_candidato_con_criterios_empresa,
+    generar_o_modificar_prueba,
+)
+from core.services import generar_contenido_seguro
 
-def _get_usuario_recluta(request):
-    """Devuelve el objeto Usuario.recluta según el usuario autenticado."""
-    if not request.user.is_authenticated:
+
+def _get_empresa_for_user(usuario):
+    if not usuario:
         return None
-    user = Usuario.objects.filter(nombre_usuario=request.user.username).first()
-    if not user:
-        user = Usuario.objects.filter(email=request.user.email).first()
-    return user
+    empresa = Empresa.objects.filter(usuario=usuario).first()
+    if not empresa:
+        empresa = Empresa.objects.filter(usuario__nombre_usuario=usuario.nombre_usuario).first()
+    if not empresa and usuario.email:
+        empresa = Empresa.objects.filter(usuario__email=usuario.email).first()
+    return empresa
 
 
-
-def _get_persona_for_user(user):
-    if not user:
+def _get_persona_for_user(usuario):
+    if not usuario:
         return None
-    return Persona.objects.filter(usuario=user).first()
+    persona = Persona.objects.filter(usuario=usuario).first()
+    if not persona:
+        persona = Persona.objects.filter(usuario__nombre_usuario=usuario.nombre_usuario).first()
+    if not persona and usuario.email:
+        persona = Persona.objects.filter(usuario__email=usuario.email).first()
+    return persona
 
 
-def _get_empresa_for_user(user):
-    if not user:
-        return None
-    return Empresa.objects.filter(usuario=user).first()
-    """Devuelve el objeto Usuario.recluta según el usuario autenticado."""
-    if not request.user.is_authenticated:
-        return None
-    user = Usuario.objects.filter(nombre_usuario=request.user.username).first()
-    if not user:
-        user = Usuario.objects.filter(email=request.user.email).first()
-    return user
+
+# --- Agente ---
+from core.services import evaluar_candidato_con_criterios_empresa
 
 
-def _get_persona_for_user(user):
-    if not user:
-        return None
-    return Persona.objects.filter(usuario=user).first()
+def evaluar_candidato_view(request):
+  if request.method == "POST":
+    try:
+      data = json.loads(request.body)
+      respuestas = data.get("respuestas_candidato", "")
+      criterios = data.get("criterios_vacante", "")
 
+      if not respuestas or not criterios:
+        return JsonResponse(
+            {
+                "error": (
+                    "Las respuestas y los criterios son obligatorios para"
+                    " evaluar."
+                )
+            },
+            status=400,
+        )
 
-def _get_empresa_for_user(user):
-    if not user:
-        return None
-    return Empresa.objects.filter(usuario=user).first()
+      resultado_analisis = evaluar_candidato_con_criterios_empresa(
+          respuestas_candidato=respuestas,
+          requisitos_vacante=criterios,
+          nombre_archivo_guia="Test de Temperatura.pdf",
+      )
+
+      return JsonResponse(
+          {
+              "success": True,
+              "mensaje": "¡Evaluación realizada con éxito!",
+              "analisis": resultado_analisis,
+          }
+      )
+
+    except Exception as e:
+      return JsonResponse({"error": str(e)}, status=500)
+
+  return JsonResponse({"error": "Método no permitido"}, status=405)
 
 
 def api_agente_interactivo(request):
@@ -99,38 +138,6 @@ def api_agente_interactivo(request):
             
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-
-import time
-
-def generar_contenido_seguro(prompt_texto):
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    
-    modelos_disponibles = [
-        'gemini-2.0-flash',
-        'gemini-flash-latest',
-    ]
-    
-    intentos_maximos = 3
-    ultimo_error = None
-    
-    for modelo in modelos_disponibles:
-        for intento in range(intentos_maximos):
-            try:
-                response = client.models.generate_content(
-                    model=modelo,
-                    contents=prompt_texto,
-                )
-                if response and response.text:
-                    return response.text
-            except Exception as e:
-                ultimo_error = str(e)
-                # Si el error es por saturación (503), esperamos unos segundos antes de reintentar
-                if '503' in str(e) or 'UNAVAILABLE' in str(e):
-                    time.sleep(2 * (intento + 1)) # Espera progresiva: 2s, 4s, 6s...
-                    continue
-                break # Si es otro tipo de error, salta al siguiente modelo
-                
-    raise Exception(f"No se pudo conectar tras varios reintentos. Último error: {ultimo_error}")
 
 
 def api_crear_prueba_ia(request):
@@ -215,6 +222,7 @@ def agente_ia_analisis(request):
         'texto_usuario': texto_usuario
     })
 
+#---Fin agente ---
 
 @login_required(login_url='login')
 def superadmin_reporte_consumo(request, pk):
@@ -703,6 +711,10 @@ def login_view(request):
                 messages.error(request, 'Usuario o contraseña incorrectos.')
                 return render(request, 'login.html')
 
+            if not usuario_obj.activo:
+                messages.error(request, 'Tu cuenta está desactivada. Contacta al administrador.')
+                return render(request, 'login.html')
+
             from django.contrib.auth.models import User
             django_user, _ = User.objects.get_or_create(username=usuario_obj.nombre_usuario)
             django_user.backend = 'django.contrib.auth.backends.ModelBackend'
@@ -739,51 +751,9 @@ def logout_view(request):
     return redirect('login')
 
 def registro_view(request):
-    if request.method == 'POST':
-        username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
-        password = request.POST.get('password', '')
-
-        if not username or not email or not password:
-            messages.error(request, 'Todos los campos son obligatorios.')
-            return render(request, 'registro.html')
-
-        if Usuario.objects.filter(nombre_usuario=username).exists():
-            messages.error(request, 'Ese nombre de usuario ya está en uso.')
-            return render(request, 'registro.html')
-
-        if Usuario.objects.filter(email=email).exists():
-            messages.error(request, 'Ese correo ya está registrado.')
-            return render(request, 'registro.html')
-
-        try:
-            usuario = Usuario.objects.create(
-                nombre_usuario=username,
-                email=email,
-                contrasena=password,
-                rol='profesional'
-            )
-
-            Persona.objects.create(
-                nombre=username,
-                email=email,
-                usuario=usuario
-            )
-
-            from django.contrib.auth.models import User
-            django_user, creado = User.objects.get_or_create(username=username)
-            django_user.backend = 'django.contrib.auth.backends.ModelBackend'
-            auth_login(request, django_user)
-
-            messages.success(request, '¡Cuenta creada correctamente! Bienvenido a ReclutaMente.')
-            return redirect('home_profesionales')
-
-        except Exception as e:
-            print("--- ERROR EN REGISTRO ---", e)
-            messages.error(request, 'Ocurrió un error al crear la cuenta. Intenta nuevamente.')
-            return render(request, 'registro.html')
-
-    return render(request, 'registro.html')
+        if request.method == 'POST':
+            return redirect('dashboard_general')
+        return render(request, 'registro.html')
 
 # Vistas principales (SIN decoradores restrictivos por ahora)
 def dashboard_general(request):
@@ -926,6 +896,29 @@ def superadmin_empresas_ia(request, pk):
 
 
 @login_required(login_url='login')
+@login_required(login_url='login')
+def superadmin_toggle_profesional(request, pk):
+    persona = get_object_or_404(Persona, pk=pk)
+    usuario = persona.usuario
+    if request.method == 'POST':
+        if usuario:
+            usuario.activo = not bool(usuario.activo)
+            usuario.save(update_fields=['activo'])
+            if usuario.activo:
+                estado = 'activada'
+            else:
+                estado = 'desactivada'
+            registrar_en_bitacora(
+                request.user,
+                estado.capitalize() + " la cuenta del profesional: " + persona.nombre + " (" + usuario.nombre_usuario + ")",
+                "Profesionales",
+            )
+            messages.success(request, 'Cuenta ' + estado + ' correctamente.')
+        else:
+            messages.error(request, 'No hay usuario asociado a este profesional.')
+    return redirect('superadmin_profesionales')
+
+
 def superadmin_profesionales(request):
     try:
         nombre_filtro = request.GET.get('nombre', '').strip()
@@ -954,8 +947,68 @@ def superadmin_profesionales(request):
     
     return render(request, 'superAdmin/superadmin_profesionales.html', context)
 
+@login_required(login_url='login')
 def superadmin_perfil(request):
-        return render(request, 'superAdmin/superadmin_perfil.html')
+    usuario = get_recluta_user(request)
+
+    if not usuario:
+        messages.error(request, 'No se encontró tu cuenta de administrador.')
+        return redirect('login')
+
+    if request.method == 'POST':
+        nombre_usuario = request.POST.get('nombre_usuario', '').strip()
+        email = request.POST.get('email', '').strip()
+        contrasena_actual = request.POST.get('contrasena_actual', '')
+        contrasena_nueva = request.POST.get('contrasena_nueva', '')
+        contrasena_confirmar = request.POST.get('contrasena_confirmar', '')
+
+        errores = []
+
+        if not nombre_usuario or not email:
+            errores.append('El nombre de usuario y el correo son obligatorios.')
+
+        if nombre_usuario and nombre_usuario != usuario.nombre_usuario:
+            if Usuario.objects.filter(nombre_usuario=nombre_usuario).exclude(pk=usuario.pk).exists():
+                errores.append('Ese nombre de usuario ya está en uso.')
+
+        if email and email != usuario.email:
+            if Usuario.objects.filter(email=email).exclude(pk=usuario.pk).exists():
+                errores.append('Ese correo electrónico ya está registrado.')
+
+        if contrasena_nueva or contrasena_confirmar or contrasena_actual:
+            if contrasena_actual != usuario.contrasena:
+                errores.append('La contraseña actual es incorrecta.')
+            elif not contrasena_nueva or contrasena_nueva != contrasena_confirmar:
+                errores.append('La nueva contraseña y su confirmación no coinciden.')
+
+        if errores:
+            for error in errores:
+                messages.error(request, error)
+        else:
+            try:
+                usuario.nombre_usuario = nombre_usuario
+                usuario.email = email
+                if contrasena_nueva:
+                    usuario.contrasena = contrasena_nueva
+                usuario.save()
+
+                django_user = request.user
+                django_user.username = nombre_usuario
+                django_user.email = email
+                django_user.save()
+
+                registrar_en_bitacora(
+                    request.user,
+                    f"Actualizó su perfil de superadmin ({usuario.nombre_usuario})",
+                    "Perfil"
+                )
+                messages.success(request, 'Perfil actualizado correctamente.')
+            except Exception as e:
+                messages.error(request, f'No se pudo actualizar el perfil: {e}')
+
+        return redirect('superadmin_perfil')
+
+    return render(request, 'superAdmin/superadmin_perfil.html', {'usuario': usuario})
 
 
 def superadmin_ticket_cancelar(request, pk):
@@ -997,6 +1050,9 @@ def home_profesionales(request):
     usuario = get_recluta_user(request)
     if not usuario:
         return redirect('login')
+    if not usuario.activo:
+        messages.error(request, 'Tu cuenta está desactivada. Contacta al administrador.')
+        return redirect('login')
     if _get_empresa_for_user(usuario):
         return redirect('empresa_dashboard')
     persona = _get_persona_for_user(usuario)
@@ -1024,16 +1080,64 @@ def profesional_perfil(request):
     usuario = get_recluta_user(request)
     if not usuario:
         return redirect('login')
-    empresa = _get_empresa_for_user(usuario)
-    if empresa:
+    if not usuario.activo:
+        messages.error(request, 'Tu cuenta está desactivada. Contacta al administrador.')
+        return redirect('login')
+    if _get_empresa_for_user(usuario):
         return redirect('empresa_dashboard')
     persona = _get_persona_for_user(usuario)
-    intentos = []
-    certificaciones = []
-
     if not persona:
         messages.error(request, 'No tienes un perfil de profesional asociado a esta cuenta.')
         return redirect('login')
+
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        email = request.POST.get('email', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        contrasena_actual = request.POST.get('contrasena_actual', '')
+        contrasena_nueva = request.POST.get('contrasena_nueva', '')
+        contrasena_confirmar = request.POST.get('contrasena_confirmar', '')
+
+        errores = []
+
+        if not nombre or not email:
+            errores.append('El nombre y el correo son obligatorios.')
+
+        if email and email != persona.email:
+            if Persona.objects.filter(email=email).exclude(pk=persona.pk).exists():
+                errores.append('Ese correo electrónico ya está registrado por otro profesional.')
+
+        cuenta = persona.usuario
+        if contrasena_nueva or contrasena_confirmar or contrasena_actual:
+            if not cuenta or contrasena_actual != cuenta.contrasena:
+                errores.append('La contraseña actual es incorrecta.')
+            elif not contrasena_nueva or contrasena_nueva != contrasena_confirmar:
+                errores.append('La nueva contraseña y su confirmación no coinciden.')
+
+        if errores:
+            for error in errores:
+                messages.error(request, error)
+        else:
+            try:
+                persona.nombre = nombre
+                persona.email = email
+                persona.telefono = telefono
+                persona.save()
+
+                if cuenta:
+                    cuenta.email = email
+                    if contrasena_nueva:
+                        cuenta.contrasena = contrasena_nueva
+                    cuenta.save()
+
+                    request.user.email = email
+                    request.user.save()
+
+                messages.success(request, 'Perfil actualizado correctamente.')
+            except Exception as e:
+                messages.error(request, f'No se pudo actualizar el perfil: {e}')
+
+        return redirect('profesional_perfil')
 
     try:
         intentos = list(
