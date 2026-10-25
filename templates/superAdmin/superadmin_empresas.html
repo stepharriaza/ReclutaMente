@@ -51,6 +51,7 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Empresa</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Plan contratado</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Consumo mensual</th>
@@ -61,7 +62,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for empresa in empresas %}
                 <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ empresa.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ empresa.usuario.nombre_usuario }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ empresa.nombre }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ empresa.plan }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ empresa.plazas.count }} plazas</td>

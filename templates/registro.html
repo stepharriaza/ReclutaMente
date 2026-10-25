@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro - ReclutaMente</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
 </head>
 <body class="bg-zinc-950 text-white flex items-center justify-center min-h-screen py-10 px-4">
 
@@ -24,28 +25,52 @@
             {% endfor %}
         {% endif %}
 
-        <form method="POST" class="space-y-4">
+        <form method="POST" onsubmit="return validarPasswords()" class="space-y-4">
             {% csrf_token %}
             
             <div>
-                <label class="block text-sm font-medium text-zinc-300 mb-1">Nombre de usuario</label>
-                <input type="text" name="username" required class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <label class="block text-sm font-medium text-zinc-300 mb-1">Nombre</label>
+                <input type="text" name="nombre" required placeholder="Escribe tu nombre completo" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-zinc-300 mb-1">Usuario</label>
+                <input type="text" name="username" required placeholder="Escribe un nombre de usuario" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-300 mb-1">Correo electrónico</label>
-                <input type="email" name="email" required class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="email" name="email" required placeholder="Ingresa tu correo electrónico"class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-sm font-medium text-zinc-300 mb-1">Contraseña</label>
-                <input type="password" name="password" required class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="password" name="password" required placeholder="Escribe una contraseña" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-zinc-300 mb-1">Confirmar contraseña</label>
+                <input type="password" name="confirm_password" required placeholder="Escribe de nuevo la contraseña" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
 
             <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 rounded-lg transition text-sm shadow-sm mt-4">
                 Registrarse
             </button>
         </form>
+
+        <script>
+            function validarPasswords() {
+            const password = document.querySelector('[name="password"]').value;
+            const confirmPassword = document.querySelector('[name="confirm_password"]').value;
+
+            if (password !== confirmPassword) {
+                alert('Las contraseñas no coinciden');
+                return false;
+            }
+
+                return true;
+            }
+        </script>
 
         <p class="text-center text-sm text-zinc-400 mt-6">
             ¿Ya tienes una cuenta? 

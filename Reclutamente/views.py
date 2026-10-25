@@ -751,9 +751,51 @@ def logout_view(request):
     return redirect('login')
 
 def registro_view(request):
-        if request.method == 'POST':
-            return redirect('dashboard_general')
-        return render(request, 'registro.html')
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password = request.POST.get('password', '')
+
+        if not username or not email or not password:
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'registro.html')
+
+        if Usuario.objects.filter(nombre_usuario=username).exists():
+            messages.error(request, 'Ese nombre de usuario ya está en uso.')
+            return render(request, 'registro.html')
+
+        if Usuario.objects.filter(email=email).exists():
+            messages.error(request, 'Ese correo ya está registrado.')
+            return render(request, 'registro.html')
+
+        try:
+            usuario = Usuario.objects.create(
+                nombre_usuario=username,
+                email=email,
+                contrasena=password,
+                rol='profesional'
+            )
+
+            Persona.objects.create(
+                nombre=username,
+                email=email,
+                usuario=usuario
+            )
+
+            from django.contrib.auth.models import User
+            django_user, creado = User.objects.get_or_create(username=username)
+            django_user.backend = 'django.contrib.auth.backends.ModelBackend'
+            auth_login(request, django_user)
+
+            messages.success(request, '¡Cuenta creada correctamente! Bienvenido a ReclutaMente.')
+            return redirect('home_profesionales')
+
+        except Exception as e:
+            print("--- ERROR EN REGISTRO ---", e)
+            messages.error(request, 'Ocurrió un error al crear la cuenta. Intenta nuevamente.')
+            return render(request, 'registro.html')
+
+    return render(request, 'registro.html')
 
 # Vistas principales (SIN decoradores restrictivos por ahora)
 def dashboard_general(request):

@@ -51,7 +51,7 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">ID</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Usuario</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Nombre profesional</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Usuario</th>
                     <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Estado</th>
@@ -66,7 +66,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 {% for profesional in profesionales %}
                 <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ profesional.id }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ profesional.usuario.nombre_usuario }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ profesional.nombre }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ profesional.usuario.nombre_usuario|default:"Sin usuario" }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
