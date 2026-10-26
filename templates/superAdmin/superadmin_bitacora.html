@@ -1,60 +1,91 @@
 {% extends 'base.html' %}
 
-{% block title %}Bitácora del Sistema - Superadmin{% endblock %}
+{% block title %}Bitácora del Sistema | ReclutaMente{% endblock %}
 
 {% block content %}
-<div class="bg-white shadow-sm border border-gray-200 rounded-xl p-6">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div>
-            <h2 class="text-xl font-bold text-gray-900">| BITÁCORA DE ACTIVIDAD Y MODIFICACIONES</h2>
+
+{# encabezado #}
+<section class="relative overflow-hidden bg-indigo-950 text-white">
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+        <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+        <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
+    </div>
+
+    <div class="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Auditoría y trazabilidad</p>
+        <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+            Bitácora de actividad
+        </h1>
+        <p class="mt-4 max-w-2xl text-lg leading-relaxed text-indigo-200/70">
+            Consulta el registro cronológico de acciones, creaciones y modificaciones realizadas dentro de la plataforma.
+        </p>
+    </div>
+</section>
+
+{# listado y filtros de bitacora #}
+<section class="border-t border-gray-200 bg-white py-16">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+
+        <div class="mb-8 flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-end">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-600">Historial</p>
+                <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">Actividad y modificaciones</h2>
+            </div>
+
+            <!-- FORMULARIO DE FILTRO FUNCIONAL -->
+            <form method="GET" action="" class="flex w-full flex-wrap items-center gap-3 lg:w-auto">
+                <div class="min-w-[200px] flex-1 sm:w-56">
+                    <input type="text" name="usuario" value="{{ usuario_filtro }}" placeholder="Filtrar por usuario..." 
+                           class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                </div>
+                <div class="min-w-[160px] flex-1 sm:w-44">
+                    <input type="date" name="fecha" value="{{ fecha_filtro }}" 
+                           class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                </div>
+                <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
+                    Filtrar
+                </button>
+                <a href="{% url 'superadmin_bitacora' %}" class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-zinc-600 transition hover:border-gray-300 hover:bg-zinc-100 hover:text-zinc-900">
+                    Limpiar
+                </a>
+            </form>
         </div>
 
-        <!-- FORMULARIO DE FILTRO FUNCIONAL -->
-        <form method="GET" action="" class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <div class="relative flex-1 md:w-48">
-                <input type="text" name="usuario" value="{{ usuario_filtro }}" placeholder="Filtrar por usuario..." 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
-            <div class="relative flex-1 md:w-40">
-                <input type="date" name="fecha" value="{{ fecha_filtro }}" 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-            </div>
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-1.5 rounded-lg text-sm transition">
-                Filtrar
-            </button>
-            <a href="{% url 'superadmin_bitacora' %}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1.5 rounded-lg text-sm transition">
-                Limpiar
-            </a>
-        </form>
-    </div>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-zinc-50/80">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Fecha / Hora</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Usuario (Admin)</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Acción realizada</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Módulo / Perfil afectado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for log in bitacora_list %}
+                    <tr class="transition hover:bg-indigo-50/30">
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-500">{{ log.fecha_hora }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm font-semibold text-zinc-900">{{ log.usuario }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-700">{{ log.accion }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm">
+                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+                                {{ log.modulo }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-16 text-center text-sm text-zinc-500">
+                            No se encontraron registros en la bitácora con los filtros aplicados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Fecha / Hora</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Usuario (Admin)</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Acción realizada</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Módulo / Perfil afectado</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for log in bitacora_list %}
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ log.fecha_hora }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ log.usuario }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ log.accion }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ log.modulo }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="px-6 py-12 text-center text-sm text-gray-400">
-                        No se encontraron registros en la bitácora con los filtros aplicados.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-</div>
+</section>
+
 {% endblock %}

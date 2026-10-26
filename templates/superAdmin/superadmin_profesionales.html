@@ -1,161 +1,178 @@
 {% extends 'base.html' %}
 
-{% block title %}Gestión de Profesionales - Superadmin{% endblock %}
+{% block title %}Gestión de Profesionales | ReclutaMente{% endblock %}
 
 {% block content %}
-<div class="bg-white shadow-sm border border-gray-200 rounded-xl p-6">
-    <!-- CABECERA Y BOTONES -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div>
-            <h2 class="text-xl font-bold text-gray-900">| GESTIÓN DE PROFESIONALES</h2>
-        </div>
-        <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
-            <!-- BOTÓN QUE ABRE EL MODAL -->
-            <button onclick="abrirModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-                + Crear nuevo profesional
-            </button>
-            
-            <!-- BOTÓN QUE DESPLIEGA EL FILTRADO -->
-            <button type="button" onclick="toggleFiltros()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 border border-gray-300">
-                <span>🔍 FILTRADO AVANZADO</span>
-            </button>
-        </div>
+
+{# encabezado #}
+<section class="relative overflow-hidden bg-indigo-950 text-white">
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+        <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+        <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
     </div>
 
-    <!-- CONTENEDOR DESPLEGABLE DEL FORMULARIO DE FILTROS -->
-    <div id="filtro-container" class="{% if nombre_filtro or prueba_filtro %}block{% else %}hidden{% endif %} mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg transition-all">
-        <form method="GET" action="" class="flex flex-wrap items-center gap-3">
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre profesional</label>
-                <input type="text" name="nombre" value="{{ nombre_filtro }}" placeholder="Buscar por nombre..." 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+    <div class="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Talento y evaluaciones</p>
+        <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+            Gestión de profesionales
+        </h1>
+        <p class="mt-4 max-w-2xl text-lg leading-relaxed text-indigo-200/70">
+            Supervisa los perfiles de profesionales registrados, las pruebas realizadas, sus puntuaciones y el estado de sus certificaciones.
+        </p>
+    </div>
+</section>
+
+{# listado y filtros de profesionales #}
+<section class="border-t border-gray-200 bg-white py-16">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+
+        <!-- CABECERA Y BOTONES -->
+        <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-600">Directorio</p>
+                <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">Profesionales registrados</h2>
             </div>
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Prueba realizada</label>
-                <input type="text" name="prueba" value="{{ prueba_filtro }}" placeholder="Buscar por prueba..." 
-                       class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
-            </div>
-            <div class="flex items-end gap-2 mt-auto pt-2 sm:pt-0">
-                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition">
-                    Aplicar filtros
+            <div class="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
+                <!-- BOTÓN QUE ABRE EL MODAL -->
+                <button onclick="abrirModal()" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                        <path d="M5 12h14"/><path d="M12 5v14"/>
+                    </svg>
+                    <span>Crear nuevo profesional</span>
                 </button>
-                <a href="{% url 'superadmin_profesionales' %}" class="bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition flex items-center">
-                    Limpiar
-                </a>
+                
+                <!-- BOTÓN QUE DESPLIEGA EL FILTRADO -->
+                <button type="button" onclick="toggleFiltros()" class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <span>Filtrado avanzado</span>
+                </button>
             </div>
-        </form>
-    </div>
+        </div>
 
-    <!-- TABLA DE PROFESIONALES -->
-    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Usuario</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Nombre profesional</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Usuario</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Estado</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Prueba realizada</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Consumo mensual</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Puntuación</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Pago</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Certificado</th>
-                    <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider">Acciones</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                {% for profesional in profesionales %}
-                <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ profesional.usuario.nombre_usuario }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ profesional.nombre }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ profesional.usuario.nombre_usuario|default:"Sin usuario" }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        {% if profesional.usuario and profesional.usuario.activo %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Activo</span>
-                        {% elif profesional.usuario %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Inactivo</span>
-                        {% else %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Sin cuenta</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% with ultimo_intento=profesional.intentos.last %}
-                            {{ ultimo_intento.test.nombre|default:"Sin prueba" }}
-                        {% endwith %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ profesional.intentos.count }} intentos</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% with ultimo_intento=profesional.intentos.last %}
-                            {{ ultimo_intento.puntaje_total|default:"N/A" }}
-                        {% endwith %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Completado</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% with ultimo_intento=profesional.intentos.last %}
-                            {% if ultimo_intento.certificado %}
-                                <span class="text-green-600 font-semibold">Sí</span>
-                            {% else %}
-                                No
-                            {% endif %}
-                        {% endwith %}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% if profesional.usuario %}
-                            <form method="post" action="{% url 'superadmin_toggle_profesional' profesional.id %}">
-                                {% csrf_token %}
-                                {% if profesional.usuario.activo %}
-                                    <button type="submit" class="text-red-600 hover:text-red-800 font-medium">Desactivar</button>
+        <!-- CONTENEDOR DESPLEGABLE DEL FORMULARIO DE FILTROS -->
+        <div id="filtro-container" class="{% if nombre_filtro or prueba_filtro %}block{% else %}hidden{% endif %} mb-8 rounded-lg border border-gray-200 bg-zinc-50/70 p-6 transition-all">
+            <form method="GET" action="" class="flex flex-wrap items-end gap-4">
+                <div class="min-w-[200px] flex-1">
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Nombre profesional</label>
+                    <input type="text" name="nombre" value="{{ nombre_filtro }}" placeholder="Buscar por nombre..." 
+                           class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                </div>
+                <div class="min-w-[200px] flex-1">
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Prueba realizada</label>
+                    <input type="text" name="prueba" value="{{ prueba_filtro }}" placeholder="Buscar por prueba..." 
+                           class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                </div>
+                <div class="flex items-center gap-3 pt-2 sm:pt-0">
+                    <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
+                        Aplicar filtros
+                    </button>
+                    <a href="{% url 'superadmin_profesionales' %}" class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-zinc-600 transition hover:border-gray-300 hover:bg-zinc-100 hover:text-zinc-900">
+                        Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- TABLA DE PROFESIONALES -->
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-zinc-50/80">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Usuario</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Nombre profesional</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Prueba realizada</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Consumo mensual</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Puntuación</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Pago</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Certificado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for profesional in profesionales %}
+                    <tr class="transition hover:bg-indigo-50/30">
+                        <td class="whitespace-nowrap px-6 py-5 text-sm font-bold text-indigo-600">{{ profesional.usuario.nombre_usuario }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm font-semibold text-zinc-900">{{ profesional.nombre }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">
+                            {% with ultimo_intento=profesional.intentos.last %}
+                                {{ ultimo_intento.test.nombre|default:"Sin prueba" }}
+                            {% endwith %}
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">{{ profesional.intentos.count }} intentos</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm font-semibold text-zinc-900">
+                            {% with ultimo_intento=profesional.intentos.last %}
+                                {{ ultimo_intento.puntaje_total|default:"N/A" }}
+                            {% endwith %}
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm">
+                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+                                Completado
+                            </span>
+                        </td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm">
+                            {% with ultimo_intento=profesional.intentos.last %}
+                                {% if ultimo_intento.certificado %}
+                                    <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                                        Sí
+                                    </span>
                                 {% else %}
-                                    <button type="submit" class="text-green-600 hover:text-green-800 font-medium">Activar</button>
+                                    <span class="inline-flex items-center rounded-full border border-gray-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                        No
+                                    </span>
                                 {% endif %}
-                            </form>
-                        {% else %}
-                            <span class="text-gray-400">N/A</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="10" class="px-6 py-12 text-center text-sm text-gray-400">No se encontraron profesionales con los filtros aplicados.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-16 text-center text-sm text-zinc-500">No se encontraron profesionales con los filtros aplicados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
     </div>
-</div>
+</section>
 
 <!-- MODAL PARA CREAR NUEVO PROFESIONAL -->
-<div id="modal-crear" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-gray-900">Crear Nuevo Profesional</h3>
-            <button onclick="cerrarModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+<div id="modal-crear" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-zinc-950/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-xl border border-gray-200 bg-white p-8 shadow-2xl">
+        <div class="mb-6 flex items-start justify-between border-b border-gray-200 pb-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">Nuevo registro</p>
+                <h3 class="mt-1 text-xl font-extrabold text-zinc-900">Crear Nuevo Profesional</h3>
+            </div>
+            <button onclick="cerrarModal()" class="rounded-lg p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 text-xl font-bold leading-none">&times;</button>
         </div>
         
         <!-- Formulario que envía los datos mediante POST -->
         <form method="POST" action="{% url 'superadmin_crear_profesional' %}">
             {% csrf_token %}
             <div class="mb-4">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Nombre completo</label>
-                <input type="text" name="nombre" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">Nombre completo</label>
+                <input type="text" name="nombre" required class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
             </div>
             <div class="mb-4">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Correo electrónico</label>
-                <input type="email" name="email" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">Correo electrónico</label>
+                <input type="email" name="email" required class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
             </div>
             <div class="mb-4">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Teléfono</label>
-                <input type="text" name="telefono" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">Teléfono</label>
+                <input type="text" name="telefono" class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
             </div>
-            <div class="mb-4">
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Contraseña de acceso</label>
-                <input type="password" name="contrasena" required placeholder="••••••••" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <div class="mb-6">
+                <label class="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em] text-zinc-500">Contraseña de acceso</label>
+                <input type="password" name="contrasena" required placeholder="••••••••" class="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
             </div>
-            <div class="flex justify-end gap-2 mt-6">
-                <button type="button" onclick="cerrarModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+            <div class="flex justify-end gap-3 border-t border-gray-200 pt-5">
+                <button type="button" onclick="cerrarModal()" class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900">
                     Cancelar
                 </button>
-                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                <button type="submit" class="rounded-lg bg-indigo-600 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
                     Guardar
                 </button>
             </div>

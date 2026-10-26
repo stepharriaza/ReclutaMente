@@ -1,115 +1,168 @@
 {% extends 'base.html' %}
 
+{% block title %}Panel Corporativo | ReclutaMente{% endblock %}
+
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-7xl mx-auto space-y-8">
-        
-        <!-- ENCABEZADO DE BIENVENIDA -->
-        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+
+{# encabezado de bienvenida #}
+<section class="relative overflow-hidden bg-indigo-950 text-white">
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+        <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+        <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
+    </div>
+
+    <div class="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+        <div class="flex flex-col items-start justify-between gap-8 md:flex-row md:items-end">
             <div>
-                <span class="bg-indigo-50 text-indigo-700 text-xs font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                    Panel Corporativo
-                </span>
-                <h1 class="text-2xl font-bold text-gray-900 mt-2">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Panel Corporativo</p>
+                <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
                     {{ empresa.nombre|default:"Mi Empresa" }}
                 </h1>
-                <p class="text-sm text-gray-500">Gestiona tus vacantes y revisa el estado de tus publicaciones.</p>
+                <p class="mt-5 max-w-2xl text-lg leading-relaxed text-indigo-200/70">
+                    Gestiona tus vacantes y revisa el estado de tus publicaciones.
+                </p>
             </div>
-            
-            <div class="flex items-center gap-3">
-                <a href="{% url 'empresa_crear_vacante' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center gap-2">
-                    <span>➕</span> Publicar Nueva Vacante
+
+            <div class="flex shrink-0 items-center gap-3">
+                <a href="{% url 'empresa_crear_vacante' %}" class="inline-flex items-center gap-2 rounded-lg bg-white px-6 py-3 text-xs font-bold uppercase tracking-widest text-indigo-950 transition hover:bg-indigo-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                        <path d="M5 12h14"/><path d="M12 5v14"/>
+                    </svg>
+                    <span>Publicar Nueva Vacante</span>
                 </a>
             </div>
         </div>
 
-        <!-- TARJETAS DE MÉTRICAS -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <dl class="mt-12 grid max-w-3xl grid-cols-1 gap-10 border-t border-white/25 pt-10 sm:grid-cols-3">
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Vacantes Activas</dt>
+                <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_vacantes }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Postulantes Totales</dt>
+                <dd class="mt-2 text-4xl font-extrabold text-white">0</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Estado de Cuenta</dt>
+                <dd class="mt-2 text-2xl font-extrabold text-emerald-300 sm:text-3xl">Activo / Plan Base</dd>
+            </div>
+        </dl>
+    </div>
+</section>
+
+{# tarjetas de metricas #}
+<section class="border-t border-gray-200 bg-white py-20">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Indicadores</p>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">Resumen corporativo</h2>
+
+        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <!-- Métrica 1 -->
-            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Vacantes Activas</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-1">{{ total_vacantes }}</h3>
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">01</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <rect width="20" height="14" x="2" y="7" rx="2" ry="2"/>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                        </svg>
                     </div>
-                    <div class="bg-indigo-50 p-3 rounded-xl text-indigo-600 text-xl">
-                        💼
-                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Vacantes Activas</p>
+                    <h3 class="mt-2 text-3xl font-extrabold text-zinc-900">{{ total_vacantes }}</h3>
                 </div>
             </div>
 
             <!-- Métrica 2 -->
-            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Postulantes Totales</p>
-                        <h3 class="text-3xl font-bold text-gray-900 mt-1">0</h3>
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">02</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
                     </div>
-                    <div class="bg-emerald-50 p-3 rounded-xl text-emerald-600 text-xl">
-                        👥
-                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Postulantes Totales</p>
+                    <h3 class="mt-2 text-3xl font-extrabold text-zinc-900">0</h3>
                 </div>
             </div>
 
             <!-- Métrica 3 -->
-            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Estado de Cuenta</p>
-                        <h3 class="text-xl font-bold text-emerald-600 mt-2">Activo / Plan Base</h3>
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">03</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            <path d="m9 12 2 2 4-4"/>
+                        </svg>
                     </div>
-                    <div class="bg-blue-50 p-3 rounded-xl text-blue-600 text-xl">
-                        ⭐
-                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Estado de Cuenta</p>
+                    <h3 class="mt-2 text-xl font-extrabold text-emerald-600">Activo / Plan Base</h3>
                 </div>
             </div>
         </div>
+    </div>
+</section>
 
-        <!-- SECCIÓN: VACANTES RECIENTES -->
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-gray-900">Vacantes Publicadas Recientemente</h3>
-                <a href="{% url 'empresa_vacantes' %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition">
-                    Ver todas →
-                </a>
+{# seccion: vacantes recientes #}
+<section class="border-t border-gray-200 bg-white pb-20 pt-16">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-600">Publicaciones</p>
+                <h2 class="mt-2 text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl">Vacantes Publicadas Recientemente</h2>
             </div>
-
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
-                            <th class="py-3 px-6 font-semibold">Puesto</th>
-                            <th class="py-3 px-6 font-semibold">Ubicación</th>
-                            <th class="py-3 px-6 font-semibold">Modalidad</th>
-                            <th class="py-3 px-6 font-semibold">Vigencia</th>
-                            <th class="py-3 px-6 font-semibold">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-                    {% for vacante in vacantes_recientes %}
-                        <tr class="hover:bg-gray-50/50 transition">
-                            <td class="py-4 px-6 font-semibold text-gray-900">{{ vacante.nombre }}</td> 
-                            <td class="py-4 px-6 text-gray-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
-                            <td class="py-4 px-6 text-gray-600">{{ vacante.modalidad|default:"No especificada" }}</td>
-                            <td class="py-4 px-6 text-gray-600">{{ vacante.fecha_limite|default:"Sin límite" }}</td>
-                            <td class="py-4 px-6">
-                                <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                                    Activa
-                                </span>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5" class="py-8 text-center text-gray-400 text-sm">
-                                Aún no has registrado ninguna vacante corporativa. ¡Crea la primera!
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <a href="{% url 'empresa_vacantes' %}" class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                <span>Ver todas</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
         </div>
 
+        <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-zinc-50/80">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Puesto</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Ubicación</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Modalidad</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Vigencia</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                {% for vacante in vacantes_recientes %}
+                    <tr class="transition hover:bg-indigo-50/30">
+                        <td class="whitespace-nowrap px-6 py-5 text-sm font-semibold text-zinc-900">{{ vacante.nombre }}</td> 
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">{{ vacante.modalidad|default:"No especificada" }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">{{ vacante.fecha_limite|default:"Sin límite" }}</td>
+                        <td class="whitespace-nowrap px-6 py-5 text-sm">
+                            <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                                Activa
+                            </span>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-16 text-center text-sm text-zinc-500">
+                            Aún no has registrado ninguna vacante corporativa. ¡Crea la primera!
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+</section>
+
 {% endblock %}
