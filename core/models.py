@@ -1,4 +1,6 @@
 from decimal import Decimal
+import uuid
+
 from django.db import models
 from django.utils import timezone
 
@@ -28,6 +30,13 @@ class Plaza(models.Model):
     modalidad = models.CharField(max_length=50, blank=True, null=True)
     fecha_limite = models.DateField(blank=True, null=True)
     empresa = models.ForeignKey('Empresa', on_delete=models.CASCADE, related_name="plazas")
+    codigo_unico = models.CharField(max_length=64, unique=True, editable=False, null=True)
+    tests = models.ManyToManyField('Test', blank=True, related_name='plazas')
+
+    def save(self, *args, **kwargs):
+        if not self.codigo_unico:
+            self.codigo_unico = uuid.uuid4().hex
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.nombre
@@ -232,7 +241,9 @@ class Intento(models.Model):
     puntaje_dimensiones = models.TextField(blank=True)
     persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="intentos")
     test = models.ForeignKey(Test, on_delete=models.PROTECT, related_name="intentos")
-    postulacion = models.ForeignKey(Postulacion, on_delete=models.CASCADE)
+    postulacion = models.ForeignKey(
+        Postulacion, on_delete=models.CASCADE, related_name="intentos", null=True, blank=True
+    )
 
     def __str__(self):
         return f"{self.persona} - {self.test}"
@@ -283,3 +294,25 @@ class PruebaGeneradaEmpresa(models.Model):
 
     def __str__(self):
         return f"Prueba para {self.puesto} - {self.empresa.nombre}"
+
+
+class InvitacionEvaluacion(models.Model):
+    plaza = models.ForeignKey(Plaza, on_delete=models.CASCADE, related_name="invitaciones")
+    email = models.EmailField()
+    token = models.CharField(max_length=64, unique=True, editable=False)
+    enviado = models.BooleanField(default=False)
+    usado = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_uso = models.DateTimeField(blank=True, null=True)
+    invitado_por = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('plaza', 'email')
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = uuid.uuid4().hex
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.email} - {self.plaza.nombre}"

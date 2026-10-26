@@ -27,6 +27,13 @@
 
         <form method="POST" onsubmit="return validarPasswords()" class="space-y-4">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+            {% if request.GET.next %}
+            <div class="p-3 text-sm bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-lg">
+                Regístrate con el correo invitado para ingresar a tu evaluación.
+            </div>
+            {% endif %}
             
             <div>
                 <label class="block text-sm font-medium text-zinc-300 mb-1">Nombre</label>
@@ -39,8 +46,11 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-zinc-300 mb-1">Correo electrónico</label>
-                <input type="email" name="email" required placeholder="Ingresa tu correo electrónico"class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <label class="block text-sm font-medium text-zinc-300 mb-1">Correo electr��nico</label>
+                <input type="email" name="email" required value="{{ request.GET.email|default:'' }}" {% if request.GET.email %}readonly{% endif %} placeholder="Ingresa tu correo electr��nico" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none {% if request.GET.email %}opacity-75{% endif %}">
+                {% if request.GET.email %}
+                <p class="text-xs text-zinc-500 mt-1">Usa este correo para que tus resultados queden asociados a la invitación.</p>
+                {% endif %}
             </div>
 
             <div>
@@ -73,8 +83,8 @@
         </script>
 
         <p class="text-center text-sm text-zinc-400 mt-6">
-            ¿Ya tienes una cuenta? 
-            <a href="{% url 'login' %}" class="text-indigo-400 font-semibold hover:underline">Inicia sesión</a>
+            ��Ya tienes una cuenta? 
+            <a href="{% url 'login' %}?next={{ request.GET.next|urlencode }}&email={{ request.GET.email|urlencode }}" class="text-indigo-400 font-semibold hover:underline">Inicia sesi��n</a>
         </p>
     </div>
 

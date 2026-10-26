@@ -26,6 +26,13 @@
 
         <form method="POST" class="space-y-4">
             {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+            {% if request.GET.next %}
+            <div class="p-3 text-sm bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 rounded-lg">
+                Inicia sesión para continuar con tu evaluación.
+            </div>
+            {% endif %}
             
             <div>
                 <label class="block text-sm font-medium text-zinc-300 mb-1">Nombre de usuario</label>
@@ -43,8 +50,8 @@
         </form>
 
         <p class="text-center text-sm text-zinc-400 mt-6">
-            ¿No tienes una cuenta? 
-            <a href="{% url 'registro' %}" class="text-indigo-400 font-semibold hover:underline">Regístrate aquí</a>
+            ��No tienes una cuenta? 
+            <a href="{% url 'registro' %}?next={{ request.GET.next|urlencode }}&email={{ request.GET.email|urlencode }}" class="text-indigo-400 font-semibold hover:underline">Reg��strate aqu��</a>
         </p>
     </div>
 

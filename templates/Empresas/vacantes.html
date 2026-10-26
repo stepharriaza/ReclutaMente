@@ -41,14 +41,28 @@
                                 <td class="py-4 px-6 text-gray-600">{{ vacante.descripcion|truncatechars:30|default:"No especificada" }}</td>
                                 <td class="py-4 px-6 text-gray-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
                                 <td class="py-4 px-6 text-gray-600">{{ vacante.modalidad|default:"No especificada" }}</td>
-                                <td class="py-4 px-6 text-gray-600 font-medium">{{ vacante.fecha_limite|default:"Sin límite" }}</td>
+                                <td class="py-4 px-6 text-gray-600 font-medium">{{ vacante.fecha_limite|default:"Sin l��mite" }}</td>
                                 <td class="py-4 px-6">
                                     <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                                         Activa
                                     </span>
+                                    {% if vacante.tests.all %}
+                                    <div class="mt-2 text-xs text-gray-500">
+                                        Pruebas: {% for t in vacante.tests.all %}{{ t.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                                    </div>
+                                    {% endif %}
                                 </td>
                                 <td class="py-4 px-6 text-center space-x-2">
                                     <a href="{% url 'empresa_editar_vacante' vacante.id %}" class="text-xs text-indigo-600 font-medium hover:underline bg-indigo-50 px-3 py-1.5 rounded-lg">Editar</a>
+                                    <a href="{% url 'empresa_invitar_participantes' vacante.id %}" class="text-xs text-blue-700 font-medium hover:underline bg-blue-50 px-3 py-1.5 rounded-lg">Participantes</a>
+                                    <a href="{% url 'generar_qr_vacante' vacante.codigo_unico %}" target="_blank" class="text-xs text-emerald-700 font-medium hover:underline bg-emerald-50 px-3 py-1.5 rounded-lg">Ver QR</a>
+                                    {% with vacante.tests.all|first as first_test %}
+                                    {% if first_test %}
+                                    <a href="{% url 'evaluar_vacante_protegida' vacante.codigo_unico %}" class="text-xs text-gray-700 font-medium hover:underline bg-gray-50 px-3 py-1.5 rounded-lg">Enlace evaluación</a>
+                                    {% else %}
+                                    <a href="{% url 'evaluar_vacante_protegida' vacante.codigo_unico %}" class="text-xs text-gray-700 font-medium hover:underline bg-gray-50 px-3 py-1.5 rounded-lg">Enlace evaluación</a>
+                                    {% endif %}
+                                    {% endwith %}
                                 </td>
                             </tr>
                         {% empty %}

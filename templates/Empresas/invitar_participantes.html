@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl mx-auto space-y-6">
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Participantes de la vacante</h1>
+                <p class="text-sm text-gray-500">{{ plaza.nombre }} · {{ plaza.empresa.nombre }}</p>
+            </div>
+            <a href="{% url 'empresa_vacantes' %}" class="text-sm font-medium text-gray-600 hover:text-gray-900 transition">Volver a vacantes</a>
+        </div>
+
+        {% if messages %}
+        <div class="space-y-2">
+            {% for message in messages %}
+            <div class="p-3 text-sm rounded-xl border {% if message.tags == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-700{% else %}bg-red-50 border-red-200 text-red-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+                <h2 class="text-lg font-bold text-gray-900">Invitar por correo</h2>
+                <p class="text-sm text-gray-500 mt-1">Agrega uno o varios correos separados por comas, espacios o saltos de línea. Cada invitado recibirá un enlace único y su código QR adjunto.</p>
+
+                <form method="POST" class="mt-5 space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Correos de los participantes</label>
+                        <textarea name="emails" rows="5" required placeholder="candidato1@correo.com, candidato2@correo.com" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition shadow-sm">
+                            Enviar invitaciones
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-6 pt-6 border-t border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-700">Pruebas que se aplicarán</h3>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        {% for test in tests %}
+                        <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full">{{ test.nombre }}</span>
+                        {% endfor %}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Si la vacante tiene varias pruebas, el candidato verá un menú para elegir cuál rendir.</p>
+                </div>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+                <h2 class="text-lg font-bold text-gray-900">Enlace público</h2>
+                <p class="text-sm text-gray-500 mt-1">También puedes compartir el enlace general de la vacante.</p>
+                <a href="{{ request.scheme }}://{{ request.get_host }}/evaluacion/vacante/{{ plaza.codigo_unico }}/" target="_blank" class="mt-4 block p-3 bg-gray-50 border border-gray-200 rounded-xl break-all text-xs text-indigo-700 hover:underline">
+                    {{ request.scheme }}://{{ request.get_host }}/evaluacion/vacante/{{ plaza.codigo_unico }}/
+                </a>
+                <a href="{% url 'generar_qr_vacante' plaza.codigo_unico %}" target="_blank" class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-emerald-700 hover:underline">
+                    Ver código QR general
+                </a>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h2 class="text-lg font-bold text-gray-900">Invitaciones enviadas</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-6 font-semibold">Correo</th>
+                            <th class="py-3 px-6 font-semibold">Enviado</th>
+                            <th class="py-3 px-6 font-semibold">Ingresó</th>
+                            <th class="py-3 px-6 font-semibold">Fecha de envío</th>
+                            <th class="py-3 px-6 font-semibold">Fecha de ingreso</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                        {% for invitacion in invitaciones %}
+                        <tr class="hover:bg-gray-50/50 transition">
+                            <td class="py-4 px-6 font-medium text-gray-900">{{ invitacion.email }}</td>
+                            <td class="py-4 px-6">
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full {% if invitacion.enviado %}bg-emerald-50 text-emerald-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    {% if invitacion.enviado %}Sí{% else %}No{% endif %}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6">
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full {% if invitacion.usado %}bg-indigo-50 text-indigo-700{% else %}bg-gray-100 text-gray-600{% endif %}">
+                                    {% if invitacion.usado %}Sí{% else %}Pendiente{% endif %}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 text-gray-600">{{ invitacion.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                            <td class="py-4 px-6 text-gray-600">{{ invitacion.fecha_uso|date:"d/m/Y H:i"|default:"—" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-10 text-center text-gray-400 text-sm">Aún no has enviado invitaciones.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <h2 class="text-lg font-bold text-gray-900">Resultados de los participantes</h2>
+                <p class="text-sm text-gray-500">Los resultados se guardan automáticamente cuando el candidato finaliza la prueba.</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-6 font-semibold">Participante</th>
+                            <th class="py-3 px-6 font-semibold">Correo</th>
+                            <th class="py-3 px-6 font-semibold">Prueba</th>
+                            <th class="py-3 px-6 font-semibold">Puntaje</th>
+                            <th class="py-3 px-6 font-semibold">Estado</th>
+                            <th class="py-3 px-6 font-semibold">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                        {% for intento in resultados %}
+                        <tr class="hover:bg-gray-50/50 transition">
+                            <td class="py-4 px-6 font-medium text-gray-900">{{ intento.persona.nombre }}</td>
+                            <td class="py-4 px-6 text-gray-600">{{ intento.persona.email }}</td>
+                            <td class="py-4 px-6 text-gray-600">{{ intento.test.nombre }}</td>
+                            <td class="py-4 px-6 text-gray-900 font-semibold">{{ intento.puntaje_total|default:"—" }}</td>
+                            <td class="py-4 px-6">
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">{{ intento.get_estado_display }}</span>
+                            </td>
+                            <td class="py-4 px-6 text-gray-600">{{ intento.fecha|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="py-10 text-center text-gray-400 text-sm">Todavía no hay resultados registrados para esta vacante.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

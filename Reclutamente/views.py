@@ -1,11 +1,17 @@
-from django.db import models
-from django.http import request
+from django.db import models, transaction
+from django.http import request, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render, redirect
 from core.models import Plaza, Empresa, Ticket, Persona, Usuario, PruebaGeneradaEmpresa
+from core.models import InvitacionEvaluacion, Respuesta, Postulacion, Convocatoria, EstadoConvocatoria
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib import messages
+from django.core.mail import EmailMultiAlternatives
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from core.serializers import EmpresaSerializer  
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -22,7 +28,11 @@ from django.utils import timezone
 from google import genai
 from django.conf import settings
 from django.http import JsonResponse
+from urllib.parse import quote
 import json
+import io
+import re
+import qrcode
 from core.decorators import (
     solo_profesional,
     solo_empresa,
@@ -57,6 +67,68 @@ def _get_persona_for_user(usuario):
         persona = Persona.objects.filter(usuario__email=usuario.email).first()
     return persona
 
+
+def _generar_qr_png(data):
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = io.BytesIO()
+    img.save(buffer, format='PNG')
+    buffer.seek(0)
+    return buffer
+
+
+def _enviar_invitacion_evaluacion(request, invitacion):
+    plaza = invitacion.plaza
+    enlace = request.build_absolute_uri(
+        reverse('evaluacion_invitacion', args=[invitacion.token])
+    )
+    asunto = f'Invitación a evaluación - {plaza.nombre}'
+    mensaje_texto = (
+        f'Hola,\n\n'
+        f'{plaza.empresa.nombre} te invita a realizar la evaluación para la vacante '
+        f'"{plaza.nombre}".\n\n'
+        f'Para ingresar, abre el siguiente enlace e inicia sesión con el correo '
+        f'{invitacion.email}:\n{enlace}\n\n'
+        f'Si no tienes una cuenta, regístrate con este mismo correo para poder '
+        f'ingresar a la evaluación.\n\n'
+        f'El código QR adjunto también te lleva directamente a la evaluación.\n\n'
+        f'ReclutaMente'
+    )
+    mensaje_html = (
+        f'<p>Hola,</p>'
+        f'<p><strong>{plaza.empresa.nombre}</strong> te invita a realizar la evaluación '
+        f'para la vacante <strong>{plaza.nombre}</strong>.</p>'
+        f'<p><a href="{enlace}">Ingresar a la evaluación</a></p>'
+        f'<p>Inicia sesión o regístrate con el correo <strong>{invitacion.email}</strong> '
+        f'para que tus resultados queden asociados a tu cuenta.</p>'
+        f'<p>El código QR adjunto también te lleva directamente a la evaluación.</p>'
+        f'<p>ReclutaMente</p>'
+    )
+
+    email = EmailMultiAlternatives(
+        asunto,
+        mensaje_texto,
+        None,
+        [invitacion.email],
+    )
+    email.attach_alternative(mensaje_html, 'text/html')
+    qr_buffer = _generar_qr_png(enlace)
+    email.attach(f'qr_{plaza.nombre[:30].replace(" ", "_")}.png', qr_buffer.getvalue(), 'image/png')
+    email.send(fail_silently=False)
+    return enlace
+
+
+def _obtener_next(request, default=''):
+    next_url = request.POST.get('next') or request.GET.get('next') or ''
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return next_url
+    return default
 
 
 # --- Agente ---
@@ -433,6 +505,7 @@ def empresa_editar_vacante(request, pk):
         empresa = Empresa.objects.filter(usuario__email=usuario_actual.email).first()
 
     vacante = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+    tests_disponibles = Test.objects.filter(estado=EstadoTest.PUBLICADO).order_by('nombre')
 
     if request.method == 'POST':
         nombre = request.POST.get('nombre') or request.POST.get('titulo') or request.POST.get('puesto')
@@ -441,6 +514,7 @@ def empresa_editar_vacante(request, pk):
         ubicacion = request.POST.get('ubicacion', '')
         modalidad = request.POST.get('modalidad', '')
         fecha_limite = request.POST.get('fecha_limite') or None  # <-- Capturamos la fecha enviada del formulario
+        test_ids = request.POST.getlist('tests')
         
         try:
             if nombre:
@@ -451,8 +525,13 @@ def empresa_editar_vacante(request, pk):
                 vacante.modalidad = modalidad
                 vacante.fecha_limite = fecha_limite  # <-- Guardamos la fecha en la plaza
                 vacante.save()
+                if test_ids:
+                    tests_seleccionados = Test.objects.filter(id__in=test_ids, estado=EstadoTest.PUBLICADO)
+                    vacante.tests.set(tests_seleccionados)
+                else:
+                    vacante.tests.clear()
                 
-                messages.success(request, '¡Vacante actualizada exitosamente!')
+                messages.success(request, '��Vacante actualizada exitosamente!')
                 return redirect('empresa_vacantes')
             else:
                 messages.error(request, 'El nombre de la vacante es obligatorio.')
@@ -462,6 +541,8 @@ def empresa_editar_vacante(request, pk):
     context = {
         'vacante': vacante,
         'empresa': empresa,
+        'tests': tests_disponibles,
+        'tests_seleccionados': vacante.tests.values_list('id', flat=True),
     }
     return render(request, 'Empresas/editar_vacante.html', context)
 
@@ -513,13 +594,13 @@ def empresa_vacantes(request):
     hoy = timezone.now().date()
     
     if empresa:
-        # Plazas vigentes (fecha límite mayor o igual a hoy, o sin fecha límite)
+        # Plazas vigentes (fecha l��mite mayor o igual a hoy, o sin fecha l��mite)
         vacantes_activas = Plaza.objects.filter(empresa=empresa).filter(
             Q(fecha_limite__gte=hoy) | Q(fecha_limite__isnull=True)
-        )
+        ).prefetch_related('tests')
         
-        # Plazas anteriores / vencidas (fecha límite menor a hoy)
-        vacantes_pasadas = Plaza.objects.filter(empresa=empresa, fecha_limite__lt=hoy)
+        # Plazas anteriores / vencidas (fecha l��mite menor a hoy)
+        vacantes_pasadas = Plaza.objects.filter(empresa=empresa, fecha_limite__lt=hoy).prefetch_related('tests')
     else:
         vacantes_activas = []
         vacantes_pasadas = []
@@ -538,30 +619,43 @@ def empresa_crear_vacante(request):
     if not empresa:
         empresa = Empresa.objects.filter(usuario__email=usuario_actual.email).first()
 
+    tests_disponibles = Test.objects.filter(estado=EstadoTest.PUBLICADO).order_by('nombre')
+
     if request.method == 'POST':
         # Agregamos 'puesto' que es el nombre del input que viene de tu formulario HTML
         nombre = request.POST.get('nombre') or request.POST.get('titulo') or request.POST.get('puesto')
         descripcion = request.POST.get('descripcion')
         requisitos = request.POST.get('requisitos', '')
+        ubicacion = request.POST.get('ubicacion', '')
+        modalidad = request.POST.get('modalidad', '')
+        fecha_limite = request.POST.get('fecha_limite') or None
+        test_ids = request.POST.getlist('tests')
         
         try:
             if nombre and empresa:
-                Plaza.objects.create(
+                plaza = Plaza.objects.create(
                     nombre=nombre,
                     descripcion=descripcion,
                     requisitos=requisitos,
+                    ubicacion=ubicacion,
+                    modalidad=modalidad,
+                    fecha_limite=fecha_limite,
                     empresa=empresa
                 )
-                messages.success(request, '¡Vacante creada exitosamente!')
+                if test_ids:
+                    tests_seleccionados = Test.objects.filter(id__in=test_ids, estado=EstadoTest.PUBLICADO)
+                    plaza.tests.set(tests_seleccionados)
+                messages.success(request, '��Vacante creada exitosamente!')
                 return redirect('empresa_vacantes')
             else:
-                messages.error(request, 'Faltan datos obligatorios o no se encontró la empresa asociada.')
+                messages.error(request, 'Faltan datos obligatorios o no se encontr�� la empresa asociada.')
         except Exception as e:
-            print("--- ERROR EXCEPCIÓN AL CREAR VACANTE ---", e)
+            print("--- ERROR AL CREAR VACANTE ---", e)
             messages.error(request, f'Error al registrar la vacante: {e}')
             
     context = {
         'empresa': empresa,
+        'tests': tests_disponibles,
     }
     return render(request, 'Empresas/crear_vacante.html', context)
 
@@ -653,9 +747,75 @@ def tests_categoria(request, categoria_id):
     tests = Test.objects.filter(categoria=categoria, estado=EstadoTest.PUBLICADO)
     return render(request, "tests_categoria.html", {"categoria": categoria, "tests": tests})
 
+@login_required(login_url='login')
 def test(request, test_id):
     test_obj = get_object_or_404(Test, id=test_id, estado=EstadoTest.PUBLICADO)
     preguntas = test_obj.preguntas.order_by('fila', 'id')
+
+    if request.method == 'POST':
+        usuario = get_recluta_user(request)
+        persona = _get_persona_for_user(usuario)
+        if not persona:
+            messages.error(
+                request,
+                'Necesitas una cuenta de profesional para guardar tus resultados. '
+                'Regístrate e ingresa nuevamente.',
+            )
+            return redirect('home_profesionales')
+
+        postulacion = None
+        plaza_id = request.session.get('plaza_evaluacion_id')
+        if plaza_id:
+            plaza = Plaza.objects.filter(id=plaza_id).first()
+            if plaza and plaza.tests.filter(id=test_obj.id).exists():
+                convocatoria, _ = Convocatoria.objects.get_or_create(
+                    plaza=plaza,
+                    nombre=f'Evaluación - {plaza.nombre}',
+                    defaults={
+                        'estado': EstadoConvocatoria.ABIERTA,
+                        'requisito': plaza.requisitos,
+                    },
+                )
+                postulacion, _ = Postulacion.objects.get_or_create(
+                    persona=persona,
+                    convocatoria=convocatoria,
+                )
+
+        total = 0
+        dimensiones = {}
+        pares = []
+        for pregunta in preguntas:
+            valor = request.POST.get(f'valor_{pregunta.id}')
+            if valor is None:
+                valor = request.POST.get(f'respuesta_{pregunta.id}')
+            if valor is None:
+                continue
+            pares.append((pregunta, valor))
+            if str(valor).isdigit():
+                total += int(valor)
+                if pregunta.dimension:
+                    dimensiones[pregunta.dimension] = dimensiones.get(pregunta.dimension, 0) + int(valor)
+
+        with transaction.atomic():
+            intento = Intento.objects.create(
+                persona=persona,
+                test=test_obj,
+                postulacion=postulacion,
+                estado=EstadoIntento.COMPLETADO,
+                puntaje_total=total,
+                puntaje_dimensiones=json.dumps(dimensiones),
+            )
+            for pregunta, valor in pares:
+                Respuesta.objects.create(
+                    intento=intento,
+                    pregunta=pregunta,
+                    texto_respuesta=str(valor),
+                    tipo='escala',
+                    dimension=pregunta.dimension or '',
+                )
+
+        messages.success(request, '¡Prueba finalizada! Tus resultados fueron guardados.')
+        return redirect('home_profesionales')
 
     primera = preguntas.first()
     es_razonamiento = primera is not None and primera.texto_pregunta.strip().lower().endswith(('.png', '.jpg', '.jpeg'))
@@ -665,6 +825,164 @@ def test(request, test_id):
     return render(request, "test.html", {"test": test_obj, "preguntas": preguntas})
 
 
+def generar_qr_vacante(request, codigo_unico):
+    plaza = get_object_or_404(Plaza, codigo_unico=codigo_unico)
+    evaluation_url = request.build_absolute_uri(
+        reverse('evaluar_vacante_protegida', args=[plaza.codigo_unico])
+    )
+    buffer = _generar_qr_png(evaluation_url)
+    return HttpResponse(buffer.getvalue(), content_type='image/png')
+
+
+@login_required(login_url='login')
+def evaluar_vacante_protegida(request, codigo_unico):
+    plaza = get_object_or_404(Plaza, codigo_unico=codigo_unico)
+    usuario = get_recluta_user(request)
+    if usuario and usuario.rol in ('empresa', 'superadmin'):
+        messages.error(request, 'Solo los profesionales pueden rendir esta evaluación.')
+        if usuario.rol == 'empresa':
+            return redirect('empresa_dashboard')
+        return redirect('superadmin_dashboard')
+
+    tests = plaza.tests.filter(estado=EstadoTest.PUBLICADO).order_by('id')
+    if tests.count() == 0:
+        messages.warning(request, 'Esta vacante no tiene pruebas configuradas.')
+        return redirect('home')
+    request.session['plaza_evaluacion_id'] = plaza.id
+    if tests.count() == 1:
+        return redirect('test', test_id=tests.first().id)
+    context = {
+        'plaza': plaza,
+        'tests': tests,
+    }
+    return render(request, 'Empresas/evaluacion_vacante.html', context)
+
+
+@login_required(login_url='login')
+def empresa_invitar_participantes(request, pk):
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+    tests = plaza.tests.filter(estado=EstadoTest.PUBLICADO).order_by('id')
+
+    if not tests.exists():
+        messages.warning(request, 'Primero asigna al menos una prueba a esta vacante.')
+        return redirect('empresa_editar_vacante', pk=plaza.pk)
+
+    if request.method == 'POST':
+        raw_emails = request.POST.get('emails', '')
+        emails = [e.strip().lower() for e in re.split(r'[\s,;]+', raw_emails) if e.strip()]
+
+        if not emails:
+            messages.error(request, 'Ingresa al menos un correo electrónico.')
+        else:
+            enviados = 0
+            errores = []
+            for email in dict.fromkeys(emails):
+                try:
+                    validate_email(email)
+                except ValidationError:
+                    errores.append(f'{email} (formato inválido)')
+                    continue
+
+                invitacion, _ = InvitacionEvaluacion.objects.get_or_create(
+                    plaza=plaza,
+                    email=email,
+                    defaults={'invitado_por': empresa},
+                )
+                try:
+                    _enviar_invitacion_evaluacion(request, invitacion)
+                    if not invitacion.enviado:
+                        invitacion.enviado = True
+                        invitacion.save(update_fields=['enviado'])
+                    enviados += 1
+                except Exception as exc:
+                    errores.append(f'{email} ({exc})')
+
+            if enviados:
+                messages.success(request, f'Se enviaron {enviados} invitación(es) por correo.')
+            if errores:
+                messages.error(request, 'No se pudieron enviar: ' + ', '.join(errores))
+
+        return redirect('empresa_invitar_participantes', pk=plaza.pk)
+
+    invitaciones = plaza.invitaciones.order_by('-fecha_creacion')
+    resultados = Intento.objects.filter(
+        postulacion__convocatoria__plaza=plaza
+    ).select_related(
+        'persona', 'test', 'postulacion', 'postulacion__convocatoria'
+    ).order_by('-fecha')
+
+    context = {
+        'plaza': plaza,
+        'empresa': empresa,
+        'tests': tests,
+        'invitaciones': invitaciones,
+        'resultados': resultados,
+    }
+    return render(request, 'Empresas/invitar_participantes.html', context)
+
+
+def evaluacion_invitacion(request, token):
+    invitacion = get_object_or_404(InvitacionEvaluacion, token=token)
+    next_url = reverse('evaluacion_invitacion', args=[token])
+
+    if not request.user.is_authenticated:
+        messages.info(
+            request,
+            'Inicia sesión o regístrate con el correo invitado para ingresar a la evaluación.',
+        )
+        return redirect(
+            f"{reverse('login')}?next={quote(next_url)}&email={quote(invitacion.email)}"
+        )
+
+    usuario = get_recluta_user(request)
+    if not usuario:
+        return redirect(
+            f"{reverse('login')}?next={quote(next_url)}&email={quote(invitacion.email)}"
+        )
+
+    if usuario.rol in ('empresa', 'superadmin'):
+        messages.error(request, 'Solo los profesionales pueden rendir esta evaluación.')
+        if usuario.rol == 'empresa':
+            return redirect('empresa_dashboard')
+        return redirect('superadmin_dashboard')
+
+    persona = _get_persona_for_user(usuario)
+    emails_usuario = {
+        e.lower() for e in [usuario.email, getattr(persona, 'email', '')] if e
+    }
+    if invitacion.email.lower() not in emails_usuario:
+        messages.error(
+            request,
+            f'Esta invitación fue enviada a {invitacion.email}. '
+            f'Inicia sesión con ese correo para rendir la evaluación.',
+        )
+        return redirect('home_profesionales')
+
+    if not invitacion.usado:
+        invitacion.usado = True
+        invitacion.fecha_uso = timezone.now()
+        invitacion.save(update_fields=['usado', 'fecha_uso'])
+
+    request.session['plaza_evaluacion_id'] = invitacion.plaza_id
+    request.session['invitacion_token'] = invitacion.token
+
+    plaza = invitacion.plaza
+    tests = plaza.tests.filter(estado=EstadoTest.PUBLICADO).order_by('id')
+    if not tests.exists():
+        messages.warning(request, 'Esta vacante no tiene pruebas configuradas.')
+        return redirect('home_profesionales')
+
+    if tests.count() == 1:
+        return redirect('test', test_id=tests.first().id)
+
+    context = {
+        'plaza': plaza,
+        'tests': tests,
+        'invitacion': invitacion,
+    }
+    return render(request, 'Empresas/evaluacion_vacante.html', context)
 
 
 @api_view(['GET', 'POST'])
@@ -701,6 +1019,7 @@ def api_lista_tickets(request):
 
 
 def login_view(request):
+    next_url = _obtener_next(request)
     if request.method == 'POST':
         username_ingresado = request.POST.get('username')
         password_ingresada = request.POST.get('password')
@@ -721,6 +1040,12 @@ def login_view(request):
             auth_login(request, django_user)
 
             rol = getattr(usuario_obj, 'rol', None)
+
+            if next_url and (
+                rol == 'profesional'
+                or Persona.objects.filter(usuario=usuario_obj).exists()
+            ):
+                return redirect(next_url)
 
             if rol == 'superadmin':
                 return redirect('superadmin_dashboard')
@@ -751,8 +1076,10 @@ def logout_view(request):
     return redirect('login')
 
 def registro_view(request):
+    next_url = _obtener_next(request)
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
+        nombre = request.POST.get('nombre', '').strip() or username
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
 
@@ -777,7 +1104,7 @@ def registro_view(request):
             )
 
             Persona.objects.create(
-                nombre=username,
+                nombre=nombre,
                 email=email,
                 usuario=usuario
             )
@@ -787,8 +1114,8 @@ def registro_view(request):
             django_user.backend = 'django.contrib.auth.backends.ModelBackend'
             auth_login(request, django_user)
 
-            messages.success(request, '¡Cuenta creada correctamente! Bienvenido a ReclutaMente.')
-            return redirect('home_profesionales')
+            messages.success(request, '��Cuenta creada correctamente! Bienvenido a ReclutaMente.')
+            return redirect(next_url or 'home_profesionales')
 
         except Exception as e:
             print("--- ERROR EN REGISTRO ---", e)
