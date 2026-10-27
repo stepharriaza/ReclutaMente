@@ -1,5 +1,5 @@
-from django.db import models, transaction
-from django.http import request, HttpResponse
+from django.db import models
+from django.http import request
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render, redirect
 from core.models import Plaza, Empresa, Ticket, Persona, Usuario, PruebaGeneradaEmpresa
@@ -660,17 +660,23 @@ def empresa_crear_vacante(request):
     return render(request, 'Empresas/crear_vacante.html', context)
 
 
-@login_required
+@login_required(login_url='login')
 def empresa_perfil(request):
-    empresa = Empresa.objects.first()
-    if request.method == 'POST':
-        if empresa:
-            empresa.nombre = request.POST.get('nombre', empresa.nombre)
-            # Actualiza otros campos según tu modelo Empresa
-            empresa.save()
-            return redirect('empresa_perfil')
-            
-    return render(request, 'empresa/perfil.html', {'empresa': empresa})
+    usuario_actual = request.user
+    empresa = Empresa.objects.filter(usuario__nombre_usuario=usuario_actual.username).first()
+    if not empresa and usuario_actual.email:
+        empresa = Empresa.objects.filter(usuario__email=usuario_actual.email).first()
+    if not empresa:
+        empresa = Empresa.objects.first()
+
+    if request.method == 'POST' and empresa:
+        empresa.nombre = request.POST.get('nombre', empresa.nombre)
+        empresa.telefono = request.POST.get('telefono', empresa.telefono)
+        empresa.save()
+        messages.success(request, 'Perfil corporativo actualizado correctamente.')
+        return redirect('empresa_perfil')
+
+    return render(request, 'Empresas/perfil.html', {'empresa': empresa})
 
 
 

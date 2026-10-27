@@ -1,67 +1,188 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard General - Superadmin{% endblock %}
+{% block title %}Dashboard General | ReclutaMente{% endblock %}
 
 {% block content %}
 
+{# encabezado #}
 <section class="relative overflow-hidden bg-indigo-950 text-white">
-            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-                <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
-                <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
-                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
-            </div>
-
-            <div class="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
-                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Panel de SuperAdmin</p>
-                <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
-                    Te damos la bienvenida {{ request.user.username }}
-                </h1>
-
-            </div>
-        </section>
-
-<div class="space-y-6">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-900">| DASHBOARD GENERAL</h2>
+    <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+        <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+        <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
     </div>
 
-    <!-- TARJETAS DE MÉTRICAS -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Empresas -->
-        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Empresas Clientes</p>
-                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_empresas }}</h3>
-            </div>
-            <div class="p-3 bg-indigo-50 text-indigo-600 rounded-xl text-xl font-bold">🏢</div>
-        </div>
+    <div class="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Panel de SuperAdmin</p>
+        <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+            Te damos la bienvenida {{ request.user.username }}
+        </h1>
+        <p class="mt-5 max-w-2xl text-lg leading-relaxed text-indigo-200/70">
+            Supervisa en tiempo real el estado global de la plataforma, las empresas clientes, los profesionales registrados y la actividad de evaluaciones.
+        </p>
 
-        <!-- Profesionales / Personas -->
-        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+        <dl class="mt-12 grid max-w-4xl grid-cols-2 gap-10 border-t border-white/25 pt-10 sm:grid-cols-4">
             <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Profesionales</p>
-                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_personas }}</h3>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Empresas Clientes</dt>
+                <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_empresas }}</dd>
             </div>
-            <div class="p-3 bg-blue-50 text-blue-600 rounded-xl text-xl font-bold">👥</div>
-        </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Profesionales</dt>
+                <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_personas }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Pruebas Creadas</dt>
+                <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_tests }}</dd>
+            </div>
+            <div>
+                <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Evaluaciones</dt>
+                <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_intentos }}</dd>
+            </div>
+        </dl>
+    </div>
+</section>
 
-        <!-- Tests Disponibles -->
-        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Pruebas Creadas</p>
-                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_tests }}</h3>
-            </div>
-            <div class="p-3 bg-green-50 text-green-600 rounded-xl text-xl font-bold">📋</div>
-        </div>
+{# metricas detalladas #}
+<section class="border-t border-gray-200 bg-white py-20">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Dashboard General</p>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">Resumen de indicadores</h2>
 
-        <!-- Intentos Realizados -->
-        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Intentos / Evaluaciones</p>
-                <h3 class="text-3xl font-extrabold text-gray-900 mt-1">{{ total_intentos }}</h3>
+        <!-- TARJETAS DE MÉTRICAS -->
+        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <!-- Empresas -->
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">01</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+                            <path d="M9 22v-4h6v4"/>
+                            <path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/>
+                            <path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/>
+                            <path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Empresas Clientes</p>
+                    <h3 class="mt-2 text-3xl font-extrabold text-zinc-900">{{ total_empresas }}</h3>
+                </div>
             </div>
-            <div class="p-3 bg-yellow-50 text-yellow-600 rounded-xl text-xl font-bold">⚡</div>
+
+            <!-- Profesionales / Personas -->
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">02</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Profesionales</p>
+                    <h3 class="mt-2 text-3xl font-extrabold text-zinc-900">{{ total_personas }}</h3>
+                </div>
+            </div>
+
+            <!-- Tests Disponibles -->
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">03</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                            <path d="M12 11h4"/><path d="M12 16h4"/>
+                            <path d="M8 11h.01"/><path d="M8 16h.01"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Pruebas Creadas</p>
+                    <h3 class="mt-2 text-3xl font-extrabold text-zinc-900">{{ total_tests }}</h3>
+                </div>
+            </div>
+
+            <!-- Intentos Realizados -->
+            <div class="flex flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">04</span>
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50/60 text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">Intentos / Evaluaciones</p>
+                    <h3 class="mt-2 text-3xl font-extrabold text-zinc-900">{{ total_intentos }}</h3>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+</section>
+
+{# accesos rapidos de administracion #}
+<section class="border-t border-gray-200 bg-white pb-20 pt-16">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Administración</p>
+        <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">Módulos de gestión</h2>
+
+        <div class="mt-12 grid gap-6 md:grid-cols-2">
+            <div class="flex flex-col rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">01</p>
+                <h3 class="mt-4 text-xl font-bold text-zinc-900">Gestión de empresas</h3>
+                <p class="mt-3 flex-1 leading-relaxed text-zinc-600">
+                    Administra las empresas clientes registradas, sus planes contratados, estados y reportes de consumo.
+                </p>
+                <a href="{% url 'superadmin_empresas' %}" class="mt-8 inline-flex items-center gap-2 self-start rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                    Ver
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+            </div>
+
+            <div class="flex flex-col rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">02</p>
+                <h3 class="mt-4 text-xl font-bold text-zinc-900">Gestión de profesionales</h3>
+                <p class="mt-3 flex-1 leading-relaxed text-zinc-600">
+                    Consulta el directorio de profesionales, registra nuevos perfiles y revisa sus evaluaciones asociadas.
+                </p>
+                <a href="{% url 'superadmin_profesionales' %}" class="mt-8 inline-flex items-center gap-2 self-start rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                    Ver
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+            </div>
+
+            <div class="flex flex-col rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">03</p>
+                <h3 class="mt-4 text-xl font-bold text-zinc-900">Tickets de soporte</h3>
+                <p class="mt-3 flex-1 leading-relaxed text-zinc-600">
+                    Da seguimiento a las solicitudes de soporte de las empresas, actualiza estados y envía respuestas.
+                </p>
+                <a href="{% url 'superadmin_tickets' %}" class="mt-8 inline-flex items-center gap-2 self-start rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                    Ver
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+            </div>
+
+            <div class="flex flex-col rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">04</p>
+                <h3 class="mt-4 text-xl font-bold text-zinc-900">Bitácora del sistema</h3>
+                <p class="mt-3 flex-1 leading-relaxed text-zinc-600">
+                    Audita el historial de acciones y movimientos realizados dentro de los módulos de administración.
+                </p>
+                <a href="{% url 'superadmin_bitacora' %}" class="mt-8 inline-flex items-center gap-2 self-start rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                    Ver
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% endblock %}

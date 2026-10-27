@@ -2,7 +2,7 @@
 <nav id="navbar" class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/70 backdrop-blur-lg transition">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center justify-between">
-            <a href="{% url 'home' %}" class="flex items-center gap-3">
+            <a href="{% if 'superadmin' in request.path %}{% url 'superadmin_dashboard' %}{% else %}{% url 'empresa_dashboard' %}{% endif %}" class="flex items-center gap-3">
                 <div class="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white" title="Logo ReclutaMente">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
                         <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
@@ -19,9 +19,9 @@
                 <span class="text-lg font-bold tracking-wide text-white">
                     Recluta<span class="text-indigo-400">Mente</span>
                 </span>
-                <span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                Panel Super Admin
-            </span>
+                <span class="rounded-full border border-indigo-400/30 bg-indigo-500/10 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-indigo-300">
+                    {% if 'superadmin' in request.path %}Panel Super Admin{% else %}Panel Corporativo{% endif %}
+                </span>
             </a>
             
 
@@ -29,7 +29,7 @@
                 {% if request.user.is_authenticated %}
                     <div class="flex items-center gap-4">
                         
-                        <a href="{% url 'superadmin_perfil' %}" class="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-white/10" title="Mi perfil">
+                        <a href="{% if 'superadmin' in request.path %}{% url 'superadmin_perfil' %}{% else %}{% url 'empresa_perfil' %}{% endif %}" class="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-white/10" title="Mi perfil">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
                             <circle cx="12" cy="8" r="4"/>
                             <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>
