@@ -3,9 +3,21 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', views.home, name='home'),
-    path('catalogo/', views.catalogo, name='catalogo'),
+    path(
+        'admin/', 
+        admin.site.urls),
+        
+    path(
+        '', 
+        views.home, 
+        name='home'),
+    
+    path(
+        'catalogo/', 
+        views.catalogo, 
+        name='catalogo'
+    ),
+    
     path(
         'catalogo/<int:categoria_id>/',
         views.tests_categoria,
@@ -17,11 +29,57 @@ urlpatterns = [
     path('registro/', views.registro_view, name='registro'),
     path('logout/', views.logout_view, name='logout'),
     path('login/', views.login_view, name='login'),
-    # URL Super admin
-    path('superadmin/perfil/', views.superadmin_perfil, name='superadmin_perfil'),
     path(
-        'superadmin/tickets/', views.superadmin_tickets, name='superadmin_tickets'
+        'test/<int:test_id>/', 
+        views.test, 
+        name='test'),
+    
+    path(
+        'registro/', 
+        views.registro_view, 
+        name='registro'),
+    
+    path(
+        'logout/', 
+        views.logout_view, 
+        name='logout'),
+    
+    path(
+        'login/', 
+        views.login_view, 
+        name='login'),
+    
+    path(
+        'qr/vacante/<str:codigo_unico>/', 
+        views.generar_qr_vacante, 
+        name='generar_qr_vacante'),
+    
+    path(
+        'evaluacion/vacante/<str:codigo_unico>/', 
+        views.evaluar_vacante_protegida, 
+        name='evaluar_vacante_protegida'),
+
+    path(
+        'evaluacion/invitacion/<str:token>/',
+        views.evaluacion_invitacion,
+        name='evaluacion_invitacion'),
+
+    path(
+        'empresa/vacantes/<int:pk>/participantes/',
+        views.empresa_invitar_participantes,
+        name='empresa_invitar_participantes'),
+    # URL Super admin
+    path(
+        'superadmin/perfil/', 
+        views.superadmin_perfil, 
+        name='superadmin_perfil'),
+    
+    path(
+        'superadmin/tickets/', 
+        views.superadmin_tickets, 
+        name='superadmin_tickets'
     ),
+
     path(
         'superadmin/tickets/detalle/<int:pk>/',
         views.superadmin_ticket_detalle,
@@ -118,7 +176,6 @@ urlpatterns = [
         views.api_crear_prueba_ia,
         name='api_crear_prueba_ia',
     ),
-    # ¡NUEVAS RUTAS QUE FALTABAN!
     path(
         'api/agente-interactivo/',
         views.api_agente_interactivo,
