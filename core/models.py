@@ -225,27 +225,33 @@ class Postulacion(models.Model):
 
 
 class Intento(models.Model):
+    id = models.AutoField(primary_key=True, db_column="id_intento")
     estado = models.CharField(max_length=30, choices=EstadoIntento.choices, default=EstadoIntento.INICIADO)
-    fecha = models.DateField(auto_now_add=True)
-    duracion_minutos = models.PositiveIntegerField(blank=True, null=True)
-    puntaje_total = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
-    puntaje_dimensiones = models.TextField(blank=True)
-    persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="intentos")
-    test = models.ForeignKey(Test, on_delete=models.PROTECT, related_name="intentos")
-    postulacion = models.ForeignKey(Postulacion, on_delete=models.CASCADE)
+    fecha = models.DateTimeField(auto_now_add=True)
+    duracion = models.PositiveIntegerField(blank=True, null=True, db_column="duracion")
+    puntaje_total = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True, db_column="puntaje_total")
+    puntaje_dimensiones = models.TextField(blank=True, db_column="puntaje_dimensiones")
+    persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="intentos", db_column="id_persona")
+    test = models.ForeignKey(Test, on_delete=models.PROTECT, related_name="intentos", db_column="id_test")
+    postulacion = models.ForeignKey(Postulacion, on_delete=models.CASCADE, null=True, blank=True, db_column="id_postulacion")
+
+    class Meta:
+        db_table = "intento"
 
     def __str__(self):
         return f"{self.persona} - {self.test}"
 
 
 class Respuesta(models.Model):
+    id = models.AutoField(primary_key=True, db_column="id_respuesta")
     texto_respuesta = models.TextField(blank=True)
     tipo = models.CharField(max_length=30, blank=True)
     dimension = models.CharField(max_length=100, blank=True)
-    intento = models.ForeignKey(Intento, on_delete=models.CASCADE, related_name="respuestas")
-    pregunta = models.ForeignKey(Pregunta, on_delete=models.PROTECT)
+    intento = models.ForeignKey(Intento, on_delete=models.CASCADE, related_name="respuestas", db_column="id_intento")
+    pregunta = models.ForeignKey(Pregunta, on_delete=models.PROTECT, db_column="id_pregunta")
 
     class Meta:
+        db_table = "respuesta"
         constraints = [
             models.UniqueConstraint(fields=["intento", "pregunta"], name="uniq_intento_pregunta")
         ]

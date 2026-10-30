@@ -12,7 +12,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from core.models import Categoria, EstadoTest, Test, Intento
+from core.models import Categoria, EstadoTest, Test, Intento, Respuesta
 from core.models import Certificado, EstadoIntento
 from django.db.models import Q
 from core.models import Bitacora
@@ -670,6 +670,78 @@ def test(request, test_id):
         return render(request, "test_razonamiento.html", {"test": test_obj, "preguntas": preguntas})
 
     return render(request, "test.html", {"test": test_obj, "preguntas": preguntas})
+
+
+def iniciar_intento(request, test_id):
+    if request.method != 'POST':
+        return redirect('tests_categoria', categoria_id=Test.objects.get(id=test_id).categoria_id)
+
+    test_obj = get_object_or_404(Test, id=test_id, estado=EstadoTest.PUBLICADO)
+    usuario = get_recluta_user(request)
+    if not usuario:
+        return redirect('login')
+    persona = _get_persona_for_user(usuario)
+    if not persona:
+        messages.error(request, 'No tienes un perfil de profesional asociado a esta cuenta.')
+        return redirect('login')
+
+    intento = Intento.objects.create(
+        estado=EstadoIntento.INICIADO,
+        persona=persona,
+        test=test_obj,
+    )
+    return redirect('resolver_test', intento_id=intento.id)
+
+
+def resolver_test(request, intento_id):
+    intento = get_object_or_404(Intento, id=intento_id)
+    test_obj = intento.test
+    preguntas = test_obj.preguntas.order_by('fila', 'id')
+
+    if request.method == 'POST':
+        import json as _json
+
+        dimensiones = {}
+        total = 0
+
+        for p in preguntas:
+            valor = request.POST.get(f'valor_{p.id}') or request.POST.get(f'respuesta_{p.id}')
+            if not valor:
+                continue
+            Respuesta.objects.create(
+                texto_respuesta=valor,
+                tipo='seleccion',
+                dimension=p.dimension or '',
+                intento=intento,
+                pregunta=p,
+            )
+            try:
+                num = int(valor)
+                total += num
+                if p.dimension:
+                    dimensiones[p.dimension] = dimensiones.get(p.dimension, 0) + num
+            except ValueError:
+                pass
+
+        from datetime import datetime
+        ahora = datetime.now()
+        minutos = int((ahora - intento.fecha.replace(tzinfo=None)).total_seconds() // 60)
+
+        intento.duracion = max(minutos, 1)
+        intento.puntaje_total = total if total else None
+        intento.puntaje_dimensiones = _json.dumps(dimensiones) if dimensiones else ''
+        intento.estado = EstadoIntento.COMPLETADO
+        intento.save()
+
+        messages.success(request, 'Test completado. Tus respuestas fueron guardadas.')
+        return redirect('tests_categoria', categoria_id=test_obj.categoria_id)
+
+    primera = preguntas.first()
+    es_razonamiento = primera is not None and primera.texto_pregunta.strip().lower().endswith(('.png', '.jpg', '.jpeg'))
+    contexto = {"test": test_obj, "preguntas": preguntas, "intento": intento}
+    if es_razonamiento:
+        return render(request, "test_razonamiento.html", contexto)
+    return render(request, "test.html", contexto)
 
 
 

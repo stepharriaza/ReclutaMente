@@ -93,10 +93,13 @@
                                 <p class="mt-2 max-w-xl leading-relaxed text-zinc-600">{{ test.descripcion }}</p>
                             </div>
                         </div>
-                        <a href="{% url 'test' test.id %}" class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
-                            Comenzar
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                        </a>
+                        <form method="post" action="{% url 'iniciar_intento' test.id %}" class="inline" onsubmit="return confirm('¿Está seguro que desea comenzar el test ahora? Se registrará la hora de inicio.');">
+                            {% csrf_token %}
+                            <button type="submit" class="inline-flex shrink-0 items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                                Comenzar
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            </button>
+                        </form>
                     </div>
                     {% empty %}
                     <p class="text-zinc-600">Aún no hay pruebas publicadas en esta categoría.</p>

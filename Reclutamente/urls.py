@@ -12,6 +12,8 @@ urlpatterns = [
         name='tests_categoria',
     ),
     path('test/<int:test_id>/', views.test, name='test'),
+    path('test/iniciar/<int:test_id>/', views.iniciar_intento, name='iniciar_intento'),
+    path('test/resolver/<int:intento_id>/', views.resolver_test, name='resolver_test'),
     path('registro/', views.registro_view, name='registro'),
     path('logout/', views.logout_view, name='logout'),
     path('login/', views.login_view, name='login'),
