@@ -18,8 +18,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+<<<<<<< Updated upstream
 from core.models import Categoria, EstadoTest, Test, Intento, Respuesta
 from core.models import Certificado, EstadoIntento
+=======
+from core.models import Categoria, EstadoTest, Test, Intento
+from core.models import Certificado, EstadoIntento, AnalisisIA
+>>>>>>> Stashed changes
 from django.db.models import Q
 from core.models import Bitacora
 from django.contrib.auth import login as auth_login
@@ -43,6 +48,7 @@ from core.decorators import (
     )
 from core.services import (
     evaluar_candidato_con_criterios_empresa,
+    evaluar_candidato_estructurado,
     generar_o_modificar_prueba,
 )
 from core.services import generar_contenido_seguro
@@ -68,6 +74,94 @@ def _get_persona_for_user(usuario):
     if not persona and usuario.email:
         persona = Persona.objects.filter(usuario__email=usuario.email).first()
     return persona
+
+
+def _intentos_completados_por_persona(plaza):
+    intentos = (
+        Intento.objects.filter(
+            postulacion__convocatoria__plaza=plaza,
+            estado=EstadoIntento.COMPLETADO,
+        )
+        .select_related(
+            'persona',
+            'persona__usuario',
+            'test',
+            'postulacion',
+            'postulacion__convocatoria',
+        )
+        .prefetch_related('respuestas__pregunta')
+        .order_by('persona_id', '-fecha', '-id')
+    )
+
+    agrupados = {}
+    for intento in intentos:
+        agrupados.setdefault(intento.persona_id, []).append(intento)
+    return list(agrupados.values())
+
+
+def _contexto_plaza_para_ia(plaza):
+    return (
+        f'Puesto: {plaza.nombre}\n'
+        f'Descripción: {plaza.descripcion or "No especificada"}\n'
+        f'Requisitos originales: {plaza.requisitos or "No especificados"}'
+    )
+
+
+def _construir_evidencia_candidato(intentos):
+    persona = intentos[0].persona
+    lineas = [f'Candidato: {persona.nombre}']
+
+    for intento in intentos:
+        lineas.append(f'Prueba: {intento.test.nombre}')
+        lineas.append(f'Fecha: {intento.fecha}')
+        if intento.puntaje_total is None:
+            lineas.append('Puntaje registrado: No disponible')
+        else:
+            lineas.append(f'Puntaje registrado: {intento.puntaje_total}')
+        if intento.puntaje_dimensiones:
+            lineas.append(f'Puntajes por dimensión: {intento.puntaje_dimensiones}')
+
+        respuestas = list(intento.respuestas.all())
+        if not respuestas:
+            lineas.append('Respuestas: sin respuestas registradas.')
+            continue
+
+        lineas.append('Respuestas:')
+        for respuesta in respuestas:
+            dimension = (
+                respuesta.dimension
+                or respuesta.pregunta.dimension
+                or 'General'
+            )
+            lineas.append(
+                f'- [{dimension}] {respuesta.pregunta.texto_pregunta}: '
+                f'{respuesta.texto_respuesta or "(sin respuesta)"}'
+            )
+
+    return '\n'.join(lineas)
+
+
+def _guardar_analisis_ia(intentos, criterios, resultado, plaza):
+    representante = intentos[0]
+    perfil = {
+        'criterios': criterios,
+        'puntaje': resultado.get('puntaje'),
+        'recomendacion': resultado.get('recomendacion', ''),
+        'fortalezas': resultado.get('fortalezas', []),
+        'brechas': resultado.get('brechas', []),
+        'intentos': [intento.id for intento in intentos],
+        'plaza_id': plaza.id,
+        'evaluado_en': timezone.now().isoformat(),
+    }
+    analisis, _ = AnalisisIA.objects.update_or_create(
+        intento=representante,
+        defaults={
+            'perfil': perfil,
+            'informe_texto': resultado.get('informe', ''),
+            'modelo_usado': resultado.get('modelo', ''),
+        },
+    )
+    return analisis
 
 
 def _generar_qr_png(data):
@@ -760,6 +854,15 @@ def test(request, test_id):
     test_obj = get_object_or_404(Test, id=test_id, estado=EstadoTest.PUBLICADO)
     preguntas = test_obj.preguntas.order_by('fila', 'id')
 
+    plaza_sesion_id = request.session.get('plaza_evaluacion_id')
+    if plaza_sesion_id:
+        plaza_sesion = Plaza.objects.filter(id=plaza_sesion_id).first()
+        if plaza_sesion and plaza_sesion.esta_vencida:
+            request.session.pop('plaza_evaluacion_id', None)
+            request.session.pop('invitacion_token', None)
+            messages.warning(request, 'La convocatoria ha finalizado y ya no recibe evaluaciones.')
+            return redirect('home_profesionales')
+
     if request.method == 'POST':
         usuario = get_recluta_user(request)
         persona = _get_persona_for_user(usuario)
@@ -924,6 +1027,12 @@ def evaluar_vacante_protegida(request, codigo_unico):
             return redirect('empresa_dashboard')
         return redirect('superadmin_dashboard')
 
+    if plaza.esta_vencida:
+        request.session.pop('plaza_evaluacion_id', None)
+        request.session.pop('invitacion_token', None)
+        messages.warning(request, 'La convocatoria ha finalizado y ya no recibe evaluaciones.')
+        return redirect('home')
+
     tests = plaza.tests.filter(estado=EstadoTest.PUBLICADO).order_by('id')
     if tests.count() == 0:
         messages.warning(request, 'Esta vacante no tiene pruebas configuradas.')
@@ -944,8 +1053,17 @@ def empresa_invitar_participantes(request, pk):
     empresa = _get_empresa_for_user(usuario)
     plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
     tests = plaza.tests.filter(estado=EstadoTest.PUBLICADO).order_by('id')
+    tests_asignados = plaza.tests.all().order_by('id')
+    plaza_vencida = plaza.esta_vencida
 
-    if not tests.exists():
+    if request.method == 'POST' and plaza_vencida:
+        messages.error(
+            request,
+            'La plaza está vencida; solo puedes consultar invitaciones y resultados.',
+        )
+        return redirect('empresa_invitar_participantes', pk=plaza.pk)
+
+    if not tests.exists() and not plaza_vencida:
         messages.warning(request, 'Primero asigna al menos una prueba a esta vacante.')
         return redirect('empresa_editar_vacante', pk=plaza.pk)
 
@@ -986,26 +1104,155 @@ def empresa_invitar_participantes(request, pk):
 
         return redirect('empresa_invitar_participantes', pk=plaza.pk)
 
-    invitaciones = plaza.invitaciones.order_by('-fecha_creacion')
-    resultados = Intento.objects.filter(
+    invitaciones = list(plaza.invitaciones.order_by('-fecha_creacion'))
+    resultados = list(Intento.objects.filter(
         postulacion__convocatoria__plaza=plaza
     ).select_related(
-        'persona', 'test', 'postulacion', 'postulacion__convocatoria'
-    ).order_by('-fecha')
+        'persona', 'persona__usuario', 'test', 'postulacion', 'postulacion__convocatoria'
+    ).order_by('-fecha'))
 
+    resultados_por_email = {}
+    for intento in resultados:
+        if intento.estado != EstadoIntento.COMPLETADO:
+            continue
+        emails_intento = {intento.persona.email, intento.persona.usuario.email}
+        for email in emails_intento:
+            if email:
+                resultados_por_email.setdefault(email.lower(), set()).add(intento.test_id)
+
+    for invitacion in invitaciones:
+        pruebas_completadas = resultados_por_email.get(invitacion.email.lower(), set())
+        invitacion.pruebas_completadas = len(pruebas_completadas)
+        invitacion.respondio = bool(pruebas_completadas)
+
+    total_pruebas = tests_asignados.count()
+    total_completados = sum(
+        1 for intento in resultados if intento.estado == EstadoIntento.COMPLETADO
+    )
     context = {
         'plaza': plaza,
         'empresa': empresa,
         'tests': tests,
+        'tests_asignados': tests_asignados,
+        'tests_mostrar': tests_asignados if plaza_vencida else tests,
+        'total_pruebas': total_pruebas,
+        'total_completados': total_completados,
+        'plaza_vencida': plaza_vencida,
         'invitaciones': invitaciones,
         'resultados': resultados,
     }
     return render(request, 'Empresas/invitar_participantes.html', context)
 
 
+@login_required(login_url='login')
+def empresa_evaluar_participantes_ia(request, pk):
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    if not empresa:
+        messages.error(request, 'No se encontró una empresa asociada a tu cuenta.')
+        return redirect('empresa_dashboard')
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+    grupos = _intentos_completados_por_persona(plaza)
+    grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+    criterios = (
+        request.POST.get('criterios', '')
+        if request.method == 'POST'
+        else (plaza.requisitos or '')
+    )
+    criterios = (criterios or '').strip()
+    resultados_ia = []
+    errores = []
+
+    if request.method == 'POST':
+        if not criterios:
+            messages.error(
+                request,
+                'Escribe al menos una aptitud o conocimiento que quieras evaluar.',
+            )
+        elif not grupos:
+            messages.warning(
+                request,
+                'Todavía no hay participantes que hayan completado una prueba.',
+            )
+        else:
+            contexto_plaza = _contexto_plaza_para_ia(plaza)
+            for intentos in grupos:
+                persona = intentos[0].persona
+                try:
+                    resultado = evaluar_candidato_estructurado(
+                        respuestas_candidato=_construir_evidencia_candidato(intentos),
+                        criterios=criterios,
+                        contexto_plaza=contexto_plaza,
+                    )
+                except Exception as exc:
+                    errores.append({'persona': persona, 'error': str(exc)})
+                    continue
+
+                analisis = _guardar_analisis_ia(
+                    intentos, criterios, resultado, plaza
+                )
+                resultados_ia.append(
+                    {
+                        'persona': persona,
+                        'intentos': intentos,
+                        'resultado': resultado,
+                        'analisis': analisis,
+                    }
+                )
+
+            resultados_ia.sort(
+                key=lambda item: (
+                    item['resultado'].get('puntaje') is None,
+                    -(item['resultado'].get('puntaje') or 0),
+                    item['persona'].nombre.lower(),
+                )
+            )
+            if resultados_ia:
+                messages.success(
+                    request,
+                    f'Se evaluaron {len(resultados_ia)} participante(s) correctamente.',
+                )
+            if errores:
+                messages.error(
+                    request,
+                    f'No se pudieron evaluar {len(errores)} participante(s).',
+                )
+
+    candidatos = []
+    for intentos in grupos:
+        representante = intentos[0]
+        analisis = AnalisisIA.objects.filter(intento=representante).first()
+        candidatos.append(
+            {
+                'persona': representante.persona,
+                'intentos': intentos,
+                'analisis': analisis,
+            }
+        )
+
+    context = {
+        'plaza': plaza,
+        'empresa': empresa,
+        'criterios': criterios,
+        'candidatos': candidatos,
+        'total_candidatos': len(candidatos),
+        'resultados_ia': resultados_ia,
+        'errores': errores,
+    }
+    return render(request, 'Empresas/evaluar_participantes_ia.html', context)
+
+
 def evaluacion_invitacion(request, token):
     invitacion = get_object_or_404(InvitacionEvaluacion, token=token)
     next_url = reverse('evaluacion_invitacion', args=[token])
+
+    if invitacion.plaza.esta_vencida:
+        request.session.pop('plaza_evaluacion_id', None)
+        request.session.pop('invitacion_token', None)
+        messages.warning(request, 'La convocatoria ha finalizado y ya no recibe evaluaciones.')
+        return redirect('home')
 
     if not request.user.is_authenticated:
         messages.info(

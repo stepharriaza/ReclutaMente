@@ -108,11 +108,12 @@
                             <th class="py-3 px-6 font-semibold">Modalidad</th>
                             <th class="py-3 px-6 font-semibold">Venció el</th>
                             <th class="py-3 px-6 font-semibold text-center">Estado</th>
+                            <th class="py-3 px-6 font-semibold text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
                         {% for vacante in vacantes_pasadas %}
-                            <tr class="hover:bg-gray-50/50 transition opacity-75">
+                            <tr class="hover:bg-gray-50/50 transition">
                                 <td class="py-4 px-6 font-semibold text-gray-900">{{ vacante.nombre }}</td>
                                 <td class="py-4 px-6 text-gray-600">{{ vacante.ubicacion|default:"No especificada" }}</td>
                                 <td class="py-4 px-6 text-gray-600">{{ vacante.modalidad|default:"No especificada" }}</td>
@@ -122,10 +123,13 @@
                                         Finalizada
                                     </span>
                                 </td>
+                                <td class="py-4 px-6 text-center">
+                                    <a href="{% url 'empresa_invitar_participantes' vacante.id %}" class="text-xs text-blue-700 font-medium hover:underline bg-blue-50 px-3 py-1.5 rounded-lg">Ver participantes</a>
+                                </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="5" class="py-8 text-center text-gray-400 text-sm">
+                                <td colspan="6" class="py-8 text-center text-gray-400 text-sm">
                                     No hay registros de plazas anteriores o vencidas.
                                 </td>
                             </tr>

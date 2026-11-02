@@ -68,6 +68,10 @@ urlpatterns = [
         'empresa/vacantes/<int:pk>/participantes/',
         views.empresa_invitar_participantes,
         name='empresa_invitar_participantes'),
+    path(
+        'empresa/vacantes/<int:pk>/evaluar-ia/',
+        views.empresa_evaluar_participantes_ia,
+        name='empresa_evaluar_participantes_ia'),
     # URL Super admin
     path(
         'superadmin/perfil/', 

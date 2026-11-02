@@ -22,8 +22,19 @@
         </div>
         {% endif %}
 
+        {% if plaza_vencida %}
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-900">
+            <p class="font-semibold">Plaza vencida: solo consulta</p>
+            <p class="mt-1">La fecha límite ya pasó. Puedes revisar las invitaciones y los resultados, pero no enviar nuevas invitaciones.</p>
+        </div>
+        {% endif %}
+
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2 bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <div class="{% if plaza_vencida %}lg:col-span-3{% else %}lg:col-span-2{% endif %} bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+                {% if plaza_vencida %}
+                <h2 class="text-lg font-bold text-gray-900">Pruebas asignadas</h2>
+                <p class="text-sm text-gray-500 mt-1">Estas fueron las pruebas configuradas para la vacante.</p>
+                {% else %}
                 <h2 class="text-lg font-bold text-gray-900">Invitar por correo</h2>
                 <p class="text-sm text-gray-500 mt-1">Agrega uno o varios correos separados por comas, espacios o saltos de línea. Cada invitado recibirá un enlace único y su código QR adjunto.</p>
 
@@ -39,18 +50,24 @@
                         </button>
                     </div>
                 </form>
+                {% endif %}
 
                 <div class="mt-6 pt-6 border-t border-gray-100">
-                    <h3 class="text-sm font-semibold text-gray-700">Pruebas que se aplicarán</h3>
+                    <h3 class="text-sm font-semibold text-gray-700">{% if plaza_vencida %}Pruebas aplicadas{% else %}Pruebas que se aplicarán{% endif %}</h3>
                     <div class="mt-2 flex flex-wrap gap-2">
-                        {% for test in tests %}
+                        {% for test in tests_mostrar %}
                         <span class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full">{{ test.nombre }}</span>
+                        {% empty %}
+                        <span class="text-xs text-gray-500">No hay pruebas asignadas.</span>
                         {% endfor %}
                     </div>
+                    {% if not plaza_vencida %}
                     <p class="text-xs text-gray-500 mt-2">Si la vacante tiene varias pruebas, el candidato verá un menú para elegir cuál rendir.</p>
+                    {% endif %}
                 </div>
             </div>
 
+            {% if not plaza_vencida %}
             <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
                 <h2 class="text-lg font-bold text-gray-900">Enlace público</h2>
                 <p class="text-sm text-gray-500 mt-1">También puedes compartir el enlace general de la vacante.</p>
@@ -61,11 +78,13 @@
                     Ver código QR general
                 </a>
             </div>
+            {% endif %}
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="p-6 border-b border-gray-200 bg-gray-50/50">
                 <h2 class="text-lg font-bold text-gray-900">Invitaciones enviadas</h2>
+                <p class="text-xs text-gray-500 mt-1">Ingresó = abrió el enlace; Respondió = completó al menos una prueba.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -74,6 +93,7 @@
                             <th class="py-3 px-6 font-semibold">Correo</th>
                             <th class="py-3 px-6 font-semibold">Enviado</th>
                             <th class="py-3 px-6 font-semibold">Ingresó</th>
+                            <th class="py-3 px-6 font-semibold">Respondió</th>
                             <th class="py-3 px-6 font-semibold">Fecha de envío</th>
                             <th class="py-3 px-6 font-semibold">Fecha de ingreso</th>
                         </tr>
@@ -92,12 +112,21 @@
                                     {% if invitacion.usado %}Sí{% else %}Pendiente{% endif %}
                                 </span>
                             </td>
+                            <td class="py-4 px-6">
+                                {% if invitacion.respondio %}
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                                    Sí{% if total_pruebas %} ({{ invitacion.pruebas_completadas }}/{{ total_pruebas }}){% endif %}
+                                </span>
+                                {% else %}
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">No</span>
+                                {% endif %}
+                            </td>
                             <td class="py-4 px-6 text-gray-600">{{ invitacion.fecha_creacion|date:"d/m/Y H:i" }}</td>
                             <td class="py-4 px-6 text-gray-600">{{ invitacion.fecha_uso|date:"d/m/Y H:i"|default:"—" }}</td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="py-10 text-center text-gray-400 text-sm">Aún no has enviado invitaciones.</td>
+                            <td colspan="6" class="py-10 text-center text-gray-400 text-sm">Aún no has enviado invitaciones.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -105,7 +134,7 @@
             </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <div id="resultados" class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="p-6 border-b border-gray-200 bg-gray-50/50">
                 <h2 class="text-lg font-bold text-gray-900">Resultados de los participantes</h2>
                 <p class="text-sm text-gray-500">Los resultados se guardan automáticamente cuando el candidato finaliza la prueba.</p>
@@ -142,6 +171,14 @@
                     </tbody>
                 </table>
             </div>
+            {% if total_completados %}
+            <div class="p-4 border-t border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <p class="text-sm text-gray-600">Analiza a los participantes que ya completaron pruebas según las aptitudes que indiques.</p>
+                <a href="{% url 'empresa_evaluar_participantes_ia' plaza.id %}" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                    Evaluar con IA
+                </a>
+            </div>
+            {% endif %}
         </div>
 
     </div>
