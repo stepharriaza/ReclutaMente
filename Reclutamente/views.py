@@ -18,13 +18,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-<<<<<<< Updated upstream
 from core.models import Categoria, EstadoTest, Test, Intento, Respuesta
-from core.models import Certificado, EstadoIntento
-=======
-from core.models import Categoria, EstadoTest, Test, Intento
 from core.models import Certificado, EstadoIntento, AnalisisIA
->>>>>>> Stashed changes
 from django.db.models import Q
 from core.models import Bitacora
 from django.contrib.auth import login as auth_login
