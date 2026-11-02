@@ -25,6 +25,7 @@ from core.models import Bitacora
 from django.contrib.auth import login as auth_login
 from django.contrib.auth import authenticate 
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from google import genai
 from django.conf import settings
@@ -1097,6 +1098,7 @@ def api_lista_tickets(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@never_cache
 def login_view(request):
     next_url = _obtener_next(request)
     if request.method == 'POST':
@@ -1154,6 +1156,7 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+@never_cache
 def registro_view(request):
     next_url = _obtener_next(request)
     if request.method == 'POST':

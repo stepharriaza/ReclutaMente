@@ -108,5 +108,19 @@
         </div>
     </div>
 
+    <script>
+        // Evita el doble envío: al deshabilitar el botón el token CSRF se usa una sola vez.
+        (function () {
+            const form = document.querySelector('form');
+            if (!form) return;
+            form.addEventListener('submit', function () {
+                const btn = form.querySelector('button[type="submit"]');
+                if (!btn) return;
+                btn.disabled = true;
+                btn.textContent = 'Procesando...';
+            });
+        })();
+    </script>
+
 </body>
 </html>
