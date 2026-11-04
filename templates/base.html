@@ -24,6 +24,9 @@
 
 <script>
     const CSRF_TOKEN = "{{ csrf_token }}";
+    const RECLUTA_AGENTE_CONTEXTO = {
+        ruta: "{{ request.path|escapejs }}"
+    };
 </script>
 
 <body class="bg-white text-zinc-900 antialiased flex flex-col min-h-screen">
@@ -89,12 +92,82 @@
     </div>
 
     <script>
+        const AGENTE_HISTORIAL_KEY = 'reclutamente_agente_historial_v1';
+        const AGENTE_MAX_HISTORIAL = 24;
+
         function toggleAIChat() {
             const chatWindow = document.getElementById('ai-chat-window');
             chatWindow.classList.toggle('hidden');
+            if (!chatWindow.classList.contains('hidden')) {
+                const historial = document.getElementById('chat-historial');
+                historial.scrollTop = historial.scrollHeight;
+            }
         }
 
-        async function enviarMensajeAlAgente(textoUsuario) {
+        function leerHistorialAgente() {
+            try {
+                const guardado = sessionStorage.getItem(AGENTE_HISTORIAL_KEY);
+                if (!guardado) return [];
+                const datos = JSON.parse(guardado);
+                if (!Array.isArray(datos)) return [];
+                return datos.filter(function (item) {
+                    return item && typeof item.contenido === 'string' && item.contenido.trim();
+                });
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function guardarHistorialAgente(historial) {
+            try {
+                sessionStorage.setItem(
+                    AGENTE_HISTORIAL_KEY,
+                    JSON.stringify(historial.slice(-AGENTE_MAX_HISTORIAL))
+                );
+            } catch (error) {
+                console.warn('No se pudo guardar el historial del agente.', error);
+            }
+        }
+
+        function agregarMensajeAlHistorial(rol, contenido) {
+            const historial = leerHistorialAgente();
+            historial.push({ rol: rol, contenido: contenido });
+            guardarHistorialAgente(historial);
+        }
+
+        function crearBurbujaChat(texto, esUsuario) {
+            const contenedor = document.createElement('div');
+            contenedor.className = esUsuario ? 'flex justify-end' : 'flex justify-start';
+
+            const burbuja = document.createElement('div');
+            burbuja.className = esUsuario
+                ? 'bg-indigo-600 text-white p-3 rounded-lg max-w-[80%]'
+                : 'bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 whitespace-pre-line';
+            burbuja.textContent = texto;
+            contenedor.appendChild(burbuja);
+            return contenedor;
+        }
+
+        function renderizarHistorialAgente() {
+            const historial = document.getElementById('chat-historial');
+            const mensajes = leerHistorialAgente();
+            if (!historial || !mensajes.length) return;
+
+            historial.innerHTML = '';
+            mensajes.forEach(function (mensaje) {
+                historial.appendChild(
+                    crearBurbujaChat(mensaje.contenido, mensaje.rol === 'usuario')
+                );
+            });
+            historial.scrollTop = historial.scrollHeight;
+        }
+
+        async function enviarMensajeAlAgente(textoUsuario, historialPrevio) {
+            const contextoPagina = {
+                ruta: RECLUTA_AGENTE_CONTEXTO.ruta || window.location.pathname,
+                titulo: document.title
+            };
+
             try {
                 const response = await fetch('/api/agente-ia/', {
                     method: 'POST',
@@ -102,19 +175,29 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': CSRF_TOKEN
                     },
-                    body: JSON.stringify({ mensaje: textoUsuario })
+                    body: JSON.stringify({
+                        mensaje: textoUsuario,
+                        historial: historialPrevio || [],
+                        contexto_pagina: contextoPagina
+                    })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
-                    return data; 
+                    return data;
                 } else {
-                    return { accion: 'chat', respuesta_texto: "Hubo un error al procesar tu solicitud: " + (data.error || 'Desconocido') };
+                    return {
+                        accion: 'chat',
+                        respuesta_texto: "Hubo un error al procesar tu solicitud: " + (data.error || 'Desconocido')
+                    };
                 }
             } catch (error) {
                 console.error("Error de red:", error);
-                return { accion: 'chat', respuesta_texto: "No se pudo conectar con el servidor." };
+                return {
+                    accion: 'chat',
+                    respuesta_texto: "No se pudo conectar con el servidor."
+                };
             }
         }
 
@@ -132,50 +215,41 @@
 
             if (!texto) return;
 
-            historial.innerHTML += `
-                <div class="flex justify-end">
-                    <div class="bg-indigo-600 text-white p-3 rounded-lg max-w-[80%]">
-                        ${texto}
-                    </div>
-                </div>`;
+            const historialPrevio = leerHistorialAgente();
+
+            historial.appendChild(crearBurbujaChat(texto, true));
+            agregarMensajeAlHistorial('usuario', texto);
             input.value = '';
             historial.scrollTop = historial.scrollHeight;
 
-            const idCargando = 'loading-' + Date.now();
-            historial.innerHTML += `
-                <div id="${idCargando}" class="flex justify-start">
-                    <div class="bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 italic">
-                        Analizando con Gemini...
-                    </div>
-                </div>`;
+            const cargando = crearBurbujaChat('Analizando con Gemini...', false);
+            cargando.id = 'loading-' + Date.now();
+            historial.appendChild(cargando);
             historial.scrollTop = historial.scrollHeight;
 
-            const resultadoIA = await enviarMensajeAlAgente(texto);
+            const resultadoIA = await enviarMensajeAlAgente(texto, historialPrevio);
 
-            document.getElementById(idCargando).remove();
+            const elementoCargando = document.getElementById(cargando.id);
+            if (elementoCargando) elementoCargando.remove();
 
             const textoRespuesta = resultadoIA.respuesta || resultadoIA.respuesta_texto || "Respuesta recibida.";
-            historial.innerHTML += `
-                <div class="flex justify-start">
-                    <div class="bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 whitespace-pre-line">
-                        ${textoRespuesta}
-                    </div>
-                </div>`;
+            historial.appendChild(crearBurbujaChat(textoRespuesta, false));
+            agregarMensajeAlHistorial('agente', textoRespuesta);
             historial.scrollTop = historial.scrollHeight;
 
             if (resultadoIA.accion === 'crear_prueba') {
                 const inputPuesto = document.getElementById('id_puesto');
                 const inputCriterios = document.getElementById('id_criterios');
-                
+
                 if (inputPuesto && inputCriterios) {
                     inputPuesto.value = resultadoIA.puesto || '';
                     inputCriterios.value = resultadoIA.criterios || '';
-                    
-                    // Notificación visual opcional en pantalla
                     console.log("¡ReclutaBot autocompletó los campos del formulario!");
                 }
             }
         }
+
+        renderizarHistorialAgente();
     </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.http import request
 from django.shortcuts import get_object_or_404, render
@@ -42,11 +42,27 @@ from core.decorators import (
     get_recluta_user,
     )
 from core.services import (
+    COMPETENCIAS_EVALUACION,
+    PERFILES_OBJETIVO,
+    SESGOS_CALIFICACION,
+    asistente_criterios_evaluacion,
+    describir_sesgo_calificacion,
     evaluar_candidato_con_criterios_empresa,
     evaluar_candidato_estructurado,
     generar_o_modificar_prueba,
 )
 from core.services import generar_contenido_seguro
+from core.agente_contexto import (
+    construir_contexto_agente,
+    construir_prompt_agente,
+)
+from core.auth_utils import (
+    actualizar_contrasena,
+    crear_o_actualizar_django_user,
+    es_contrasena_hasheada,
+    validar_contrasena,
+    verificar_contrasena,
+)
 
 
 def _get_empresa_for_user(usuario):
@@ -102,12 +118,105 @@ def _contexto_plaza_para_ia(plaza):
     )
 
 
+def _perfiles_para_formulario():
+    return [
+        {
+            'valor': clave,
+            'etiqueta': descripcion.split(':')[0],
+            'descripcion': descripcion,
+        }
+        for clave, descripcion in PERFILES_OBJETIVO.items()
+    ]
+
+
+def _competencias_para_formulario():
+    return [
+        {'valor': clave, 'etiqueta': etiqueta}
+        for clave, etiqueta in COMPETENCIAS_EVALUACION.items()
+    ]
+
+
+def _sesgos_para_formulario():
+    return [
+        {
+            'valor': clave,
+            'etiqueta': clave.replace('_', ' ').capitalize(),
+            'descripcion': descripcion,
+        }
+        for clave, descripcion in SESGOS_CALIFICACION.items()
+    ]
+
+
+def _componer_criterios(
+    perfil='', competencias=None, otros='', criterios_texto=''
+):
+    partes = []
+    if perfil in PERFILES_OBJETIVO:
+        partes.append(f'Perfil buscado: {PERFILES_OBJETIVO[perfil]}')
+    competencias = [
+        clave for clave in (competencias or []) if clave in COMPETENCIAS_EVALUACION
+    ]
+    if competencias:
+        etiquetas = [
+            COMPETENCIAS_EVALUACION[clave] for clave in competencias
+        ]
+        partes.append('Competencias clave: ' + ', '.join(etiquetas))
+    if otros:
+        partes.append(f'Otros criterios: {otros}')
+    if partes:
+        return '\n'.join(partes)
+    return criterios_texto
+
+
+def _criterios_desde_formulario(request):
+    perfil = request.POST.get('perfil_objetivo', '').strip()
+    if perfil not in PERFILES_OBJETIVO:
+        perfil = ''
+
+    competencias = [
+        clave
+        for clave in request.POST.getlist('competencias')
+        if clave in COMPETENCIAS_EVALUACION
+    ]
+    otros = request.POST.get('otros_criterios', '').strip()[:1000]
+    criterios_texto = request.POST.get('criterios', '').strip()
+    if criterios_texto:
+        criterios = criterios_texto
+    else:
+        criterios = _componer_criterios(
+            perfil, competencias, otros, criterios_texto
+        )
+    return criterios, perfil, competencias, otros
+
+
+def _clave_seleccion_ia(plaza):
+    return f'evaluacion_ia_plaza_{plaza.id}'
+
+
+def _seleccion_ia_guardada(request, plaza):
+    seleccion = request.session.get(_clave_seleccion_ia(plaza), {})
+    return seleccion if isinstance(seleccion, dict) else {}
+
+
+def _guardar_seleccion_ia(
+    request, plaza, perfil, competencias, otros, sesgo, sesgo_detalle
+):
+    request.session[_clave_seleccion_ia(plaza)] = {
+        'perfil_objetivo': perfil,
+        'competencias': competencias,
+        'otros_criterios': otros,
+        'sesgo': sesgo,
+        'sesgo_detalle': sesgo_detalle,
+    }
+
+
 def _construir_evidencia_candidato(intentos):
     persona = intentos[0].persona
     lineas = [f'Candidato: {persona.nombre}']
 
     for intento in intentos:
         lineas.append(f'Prueba: {intento.test.nombre}')
+        lineas.append(f'ID de la prueba: {intento.id}')
         lineas.append(f'Fecha: {intento.fecha}')
         if intento.puntaje_total is None:
             lineas.append('Puntaje registrado: No disponible')
@@ -136,14 +245,28 @@ def _construir_evidencia_candidato(intentos):
     return '\n'.join(lineas)
 
 
-def _guardar_analisis_ia(intentos, criterios, resultado, plaza):
+def _guardar_analisis_ia(
+    intentos,
+    criterios,
+    resultado,
+    plaza,
+    sesgo='',
+    sesgo_detalle='',
+    perfil_objetivo='',
+    competencias=None,
+):
     representante = intentos[0]
     perfil = {
         'criterios': criterios,
+        'sesgo': sesgo,
+        'sesgo_detalle': sesgo_detalle,
+        'perfil_objetivo': perfil_objetivo,
+        'competencias': competencias or [],
         'puntaje': resultado.get('puntaje'),
         'recomendacion': resultado.get('recomendacion', ''),
         'fortalezas': resultado.get('fortalezas', []),
         'brechas': resultado.get('brechas', []),
+        'pruebas': resultado.get('pruebas', []),
         'intentos': [intento.id for intento in intentos],
         'plaza_id': plaza.id,
         'evaluado_en': timezone.now().isoformat(),
@@ -346,24 +469,56 @@ def api_crear_prueba_ia(request):
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
 def api_agente_ia(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            mensaje_usuario = data.get('mensaje', '')
-            
-            if not mensaje_usuario:
-                return JsonResponse({'error': 'El mensaje está vacío.'}, status=400)
-            
-            prompt = f"Actúa como un asistente virtual experto en reclutamiento y soporte para la plataforma ReclutaMente. Responde de forma clara y profesional: {mensaje_usuario}"
-            
-            respuesta_texto = generar_contenido_seguro(prompt)
-            
-            return JsonResponse({'respuesta': respuesta_texto})
-            
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-            
-    return JsonResponse({'error': 'Método no permitido'}, status=405)
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Solicitud inválida.'}, status=400)
+
+    if not isinstance(data, dict):
+        return JsonResponse({'error': 'Solicitud inválida.'}, status=400)
+
+    mensaje_usuario = str(data.get('mensaje', '')).strip()
+    if not mensaje_usuario:
+        return JsonResponse({'error': 'El mensaje está vacío.'}, status=400)
+    if len(mensaje_usuario) > 2000:
+        return JsonResponse(
+            {'error': 'El mensaje es demasiado largo.'}, status=400
+        )
+
+    contexto_pagina = data.get('contexto_pagina') or {}
+    if isinstance(contexto_pagina, dict):
+        ruta_pagina = (
+            contexto_pagina.get('ruta')
+            or contexto_pagina.get('path')
+            or ''
+        )
+    elif isinstance(contexto_pagina, str):
+        ruta_pagina = contexto_pagina
+    else:
+        ruta_pagina = ''
+    if not ruta_pagina:
+        ruta_pagina = data.get('ruta_pagina') or request.META.get(
+            'HTTP_REFERER', ''
+        )
+
+    historial = data.get('historial', [])
+    if not isinstance(historial, list):
+        historial = []
+
+    try:
+        contexto = construir_contexto_agente(
+            request,
+            ruta_pagina=str(ruta_pagina),
+            historial=historial,
+        )
+        prompt = construir_prompt_agente(mensaje_usuario, contexto)
+        respuesta_texto = generar_contenido_seguro(prompt)
+        return JsonResponse({'respuesta': respuesta_texto})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 def agente_ia_analisis(request):
@@ -482,8 +637,9 @@ def superadmin_empresas(request):
             nuevo_usuario = Usuario.objects.create(
                 nombre_usuario=nombre_usuario,
                 email=email_admin,
-                contrasena=contrasena_admin
+                contrasena=''
             )
+            actualizar_contrasena(nuevo_usuario, contrasena_admin)
             
             empresa = Empresa.objects.create(
                 nombre=nombre_empresa,
@@ -803,8 +959,9 @@ def superadmin_crear_profesional(request):
                 nuevo_usuario = Usuario.objects.create(
                     nombre_usuario=username_generado,
                     email=email,
-                    contrasena="Temp1234*" # Contraseña temporal inicial
+                    contrasena=''
                 )
+                actualizar_contrasena(nuevo_usuario, "Temp1234*")
 
                 # 2. Creamos la Persona vinculada a ese usuario
                 persona = Persona.objects.create(
@@ -858,6 +1015,7 @@ def test(request, test_id):
             messages.warning(request, 'La convocatoria ha finalizado y ya no recibe evaluaciones.')
             return redirect('home_profesionales')
 
+    # 🛡️ EL POST DEBE ESTAR FUERA DEL IF DE SESIÓN PARA EVITAR QUE SE PIERDA
     if request.method == 'POST':
         usuario = get_recluta_user(request)
         persona = _get_persona_for_user(usuario)
@@ -869,8 +1027,10 @@ def test(request, test_id):
             )
             return redirect('home_profesionales')
 
+        # ESTO DEBE ESTAR AL MISMO NIVEL QUE EL 'if not persona:', FUERA DE ÉL
         postulacion = None
         plaza_id = request.session.get('plaza_evaluacion_id')
+        
         if plaza_id:
             plaza = Plaza.objects.filter(id=plaza_id).first()
             if plaza and plaza.tests.filter(id=test_obj.id).exists():
@@ -886,6 +1046,42 @@ def test(request, test_id):
                     persona=persona,
                     convocatoria=convocatoria,
                 )
+
+        # 🛡️ BLINDAJE TOTAL: Si por alguna razón la sesión no tenía la plaza, 
+        # buscamos la primera convocatoria abierta para este test o creamos una por defecto
+        if not postulacion:
+            convocatoria_defecto = Convocatoria.objects.filter(
+                plaza__tests=test_obj, 
+                estado=EstadoConvocatoria.ABIERTA
+            ).first()
+            
+            if convocatoria_defecto:
+                postulacion, _ = Postulacion.objects.get_or_create(
+                    persona=persona,
+                    convocatoria=convocatoria_defecto,
+                )
+            else:
+                # Si de plano no hay ninguna convocatoria, creamos una de emergencia para que no falle
+                plaza_emergencia = Plaza.objects.filter(tests=test_obj).first()
+                if plaza_emergencia:
+                    convocatoria_emergencia, _ = Convocatoria.objects.get_or_create(
+                        plaza=plaza_emergencia,
+                        nombre=f'Evaluación de Emergencia - {plaza_emergencia.nombre}',
+                        defaults={'estado': EstadoConvocatoria.ABIERTA, 'requisito': plaza_emergencia.requisitos}
+                    )
+                    postulacion, _ = Postulacion.objects.get_or_create(
+                        persona=persona,
+                        convocatoria=convocatoria_emergencia,
+                    )
+
+        # Si aun así no se pudo obtener ninguna postulación, mandamos error amigable
+        if not postulacion:
+            messages.error(
+                request,
+                'No se encontró una plaza o postulación válida para esta evaluación. '
+                'Por favor, ingresa nuevamente a través del enlace de la convocatoria o QR.',
+            )
+            return redirect('home_profesionales')
 
         total = 0
         dimensiones = {}
@@ -929,7 +1125,6 @@ def test(request, test_id):
         return render(request, "test_razonamiento.html", {"test": test_obj, "preguntas": preguntas})
 
     return render(request, "test.html", {"test": test_obj, "preguntas": preguntas})
-
 
 def iniciar_intento(request, test_id):
     if request.method != 'POST':
@@ -1124,6 +1319,7 @@ def empresa_invitar_participantes(request, pk):
     total_completados = sum(
         1 for intento in resultados if intento.estado == EstadoIntento.COMPLETADO
     )
+    seleccion_ia = _seleccion_ia_guardada(request, plaza)
     context = {
         'plaza': plaza,
         'empresa': empresa,
@@ -1135,6 +1331,14 @@ def empresa_invitar_participantes(request, pk):
         'plaza_vencida': plaza_vencida,
         'invitaciones': invitaciones,
         'resultados': resultados,
+        'perfiles': _perfiles_para_formulario(),
+        'competencias_opciones': _competencias_para_formulario(),
+        'sesgos': _sesgos_para_formulario(),
+        'perfil_seleccionado': seleccion_ia.get('perfil_objetivo', ''),
+        'competencias_seleccionadas': seleccion_ia.get('competencias', []),
+        'otros_criterios': seleccion_ia.get('otros_criterios', ''),
+        'sesgo_seleccionado': seleccion_ia.get('sesgo', 'equilibrado'),
+        'sesgo_detalle': seleccion_ia.get('sesgo_detalle', ''),
     }
     return render(request, 'Empresas/invitar_participantes.html', context)
 
@@ -1151,12 +1355,39 @@ def empresa_evaluar_participantes_ia(request, pk):
     grupos = _intentos_completados_por_persona(plaza)
     grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
 
-    criterios = (
-        request.POST.get('criterios', '')
-        if request.method == 'POST'
-        else (plaza.requisitos or '')
-    )
+    seleccion_guardada = _seleccion_ia_guardada(request, plaza)
+
+    if request.method == 'POST':
+        criterios, perfil_objetivo, competencias, otros_criterios = (
+            _criterios_desde_formulario(request)
+        )
+        sesgo = request.POST.get('sesgo', 'equilibrado')
+        sesgo_detalle = request.POST.get('sesgo_detalle', '')
+    else:
+        perfil_objetivo = seleccion_guardada.get('perfil_objetivo', '')
+        if perfil_objetivo not in PERFILES_OBJETIVO:
+            perfil_objetivo = ''
+        competencias = [
+            clave
+            for clave in seleccion_guardada.get('competencias', [])
+            if clave in COMPETENCIAS_EVALUACION
+        ]
+        otros_criterios = seleccion_guardada.get('otros_criterios', '')
+        criterios = _componer_criterios(
+            perfil_objetivo,
+            competencias,
+            otros_criterios,
+            (plaza.requisitos or ''),
+        )
+        sesgo = seleccion_guardada.get('sesgo', 'equilibrado')
+        sesgo_detalle = seleccion_guardada.get('sesgo_detalle', '')
+
     criterios = (criterios or '').strip()
+    sesgo = (sesgo or 'equilibrado').strip().lower()
+    if sesgo not in SESGOS_CALIFICACION:
+        sesgo = 'equilibrado'
+    sesgo_detalle = (sesgo_detalle or '').strip()[:500]
+
     resultados_ia = []
     errores = []
 
@@ -1164,7 +1395,7 @@ def empresa_evaluar_participantes_ia(request, pk):
         if not criterios:
             messages.error(
                 request,
-                'Escribe al menos una aptitud o conocimiento que quieras evaluar.',
+                'Selecciona un perfil, una competencia o escribe otros criterios.',
             )
         elif not grupos:
             messages.warning(
@@ -1172,6 +1403,15 @@ def empresa_evaluar_participantes_ia(request, pk):
                 'Todavía no hay participantes que hayan completado una prueba.',
             )
         else:
+            _guardar_seleccion_ia(
+                request,
+                plaza,
+                perfil_objetivo,
+                competencias,
+                otros_criterios,
+                sesgo,
+                sesgo_detalle,
+            )
             contexto_plaza = _contexto_plaza_para_ia(plaza)
             for intentos in grupos:
                 persona = intentos[0].persona
@@ -1180,20 +1420,48 @@ def empresa_evaluar_participantes_ia(request, pk):
                         respuestas_candidato=_construir_evidencia_candidato(intentos),
                         criterios=criterios,
                         contexto_plaza=contexto_plaza,
+                        sesgo_calificacion=sesgo,
+                        sesgo_detalle=sesgo_detalle,
                     )
                 except Exception as exc:
                     errores.append({'persona': persona, 'error': str(exc)})
                     continue
 
                 analisis = _guardar_analisis_ia(
-                    intentos, criterios, resultado, plaza
+                    intentos,
+                    criterios,
+                    resultado,
+                    plaza,
+                    sesgo=sesgo,
+                    sesgo_detalle=sesgo_detalle,
+                    perfil_objetivo=perfil_objetivo,
+                    competencias=competencias,
                 )
+
+                intentos_por_id = {
+                    intento.id: intento for intento in intentos
+                }
+                pruebas_detalle = [
+                    {
+                        'resultado': prueba,
+                        'intento': intentos_por_id.get(
+                            prueba.get('intento_id')
+                        ),
+                    }
+                    for prueba in resultado.get('pruebas', [])
+                ]
                 resultados_ia.append(
                     {
                         'persona': persona,
                         'intentos': intentos,
                         'resultado': resultado,
                         'analisis': analisis,
+                        'sesgo': sesgo,
+                        'sesgo_detalle': sesgo_detalle,
+                        'perfil_objetivo': perfil_objetivo,
+                        'competencias': competencias,
+                        'otros_criterios': otros_criterios,
+                        'pruebas_detalle': pruebas_detalle,
                     }
                 )
 
@@ -1231,12 +1499,70 @@ def empresa_evaluar_participantes_ia(request, pk):
         'plaza': plaza,
         'empresa': empresa,
         'criterios': criterios,
+        'sesgo': sesgo,
+        'sesgo_detalle': sesgo_detalle,
+        'sesgo_label': describir_sesgo_calificacion(sesgo, sesgo_detalle),
+        'sesgos': _sesgos_para_formulario(),
+        'perfiles': _perfiles_para_formulario(),
+        'competencias_opciones': _competencias_para_formulario(),
+        'perfil_objetivo': perfil_objetivo,
+        'competencias_seleccionadas': competencias,
+        'otros_criterios': otros_criterios,
         'candidatos': candidatos,
         'total_candidatos': len(candidatos),
         'resultados_ia': resultados_ia,
         'errores': errores,
     }
     return render(request, 'Empresas/evaluar_participantes_ia.html', context)
+
+
+@login_required(login_url='login')
+def api_asistente_criterios_evaluacion(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    if not empresa:
+        return JsonResponse(
+            {'error': 'No se encontró una empresa asociada a tu cuenta.'},
+            status=403,
+        )
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Solicitud inválida.'}, status=400)
+
+    mensaje = str(data.get('mensaje', '')).strip()
+    if not mensaje:
+        return JsonResponse({'error': 'El mensaje está vacío.'}, status=400)
+    if len(mensaje) > 2000:
+        return JsonResponse(
+            {'error': 'El mensaje es demasiado largo.'}, status=400
+        )
+
+    historial = data.get('historial', [])
+    if not isinstance(historial, list):
+        historial = []
+
+    criterios_actuales = str(data.get('criterios', '')).strip()[:2000]
+    sesgo_actual = str(data.get('sesgo', '')).strip()
+
+    try:
+        resultado = asistente_criterios_evaluacion(
+            contexto_plaza=_contexto_plaza_para_ia(plaza),
+            historial=historial,
+            mensaje=mensaje,
+            criterios_actuales=criterios_actuales,
+            sesgo_actual=sesgo_actual,
+        )
+    except Exception as exc:
+        return JsonResponse({'error': str(exc)}, status=500)
+
+    return JsonResponse(resultado)
 
 
 def evaluacion_invitacion(request, token):
@@ -1348,8 +1674,8 @@ def login_view(request):
         password_ingresada = request.POST.get('password')
 
         try:
-            usuario_obj = Usuario.objects.filter(nombre_usuario=username_ingresado, contrasena=password_ingresada).first()
-            if not usuario_obj:
+            usuario_obj = Usuario.objects.filter(nombre_usuario=username_ingresado).first()
+            if not usuario_obj or not verificar_contrasena(usuario_obj, password_ingresada):
                 messages.error(request, 'Usuario o contraseña incorrectos.')
                 return render(request, 'login.html')
 
@@ -1357,8 +1683,16 @@ def login_view(request):
                 messages.error(request, 'Tu cuenta está desactivada. Contacta al administrador.')
                 return render(request, 'login.html')
 
-            from django.contrib.auth.models import User
-            django_user, _ = User.objects.get_or_create(username=usuario_obj.nombre_usuario)
+            if es_contrasena_hasheada(usuario_obj.contrasena):
+                django_user = crear_o_actualizar_django_user(
+                    usuario_obj,
+                    password=password_ingresada,
+                )
+            else:
+                django_user = actualizar_contrasena(
+                    usuario_obj,
+                    password_ingresada,
+                )
             django_user.backend = 'django.contrib.auth.backends.ModelBackend'
             auth_login(request, django_user)
 
@@ -1419,26 +1753,32 @@ def registro_view(request):
             messages.error(request, 'Ese correo ya está registrado.')
             return render(request, 'registro.html')
 
+        usuario = Usuario(
+            nombre_usuario=username,
+            email=email,
+            contrasena='',
+            rol='profesional',
+        )
         try:
-            usuario = Usuario.objects.create(
-                nombre_usuario=username,
-                email=email,
-                contrasena=password,
-                rol='profesional'
-            )
+            validar_contrasena(password, usuario)
+        except ValidationError as exc:
+            for error in exc.messages:
+                messages.error(request, error)
+            return render(request, 'registro.html')
 
+        try:
+            usuario.save()
             Persona.objects.create(
                 nombre=nombre,
                 email=email,
                 usuario=usuario
             )
 
-            from django.contrib.auth.models import User
-            django_user, creado = User.objects.get_or_create(username=username)
+            django_user = actualizar_contrasena(usuario, password)
             django_user.backend = 'django.contrib.auth.backends.ModelBackend'
             auth_login(request, django_user)
 
-            messages.success(request, '��Cuenta creada correctamente! Bienvenido a ReclutaMente.')
+            messages.success(request, '¡Cuenta creada correctamente! Bienvenido a ReclutaMente.')
             return redirect(next_url or 'home_profesionales')
 
         except Exception as e:
@@ -1669,10 +2009,19 @@ def superadmin_perfil(request):
                 errores.append('Ese correo electrónico ya está registrado.')
 
         if contrasena_nueva or contrasena_confirmar or contrasena_actual:
-            if contrasena_actual != usuario.contrasena:
+            if not verificar_contrasena(usuario, contrasena_actual):
                 errores.append('La contraseña actual es incorrecta.')
             elif not contrasena_nueva or contrasena_nueva != contrasena_confirmar:
                 errores.append('La nueva contraseña y su confirmación no coinciden.')
+            else:
+                try:
+                    validar_contrasena(
+                        contrasena_nueva,
+                        usuario,
+                        django_user=request.user,
+                    )
+                except ValidationError as exc:
+                    errores.extend(exc.messages)
 
         if errores:
             for error in errores:
@@ -1681,14 +2030,19 @@ def superadmin_perfil(request):
             try:
                 usuario.nombre_usuario = nombre_usuario
                 usuario.email = email
-                if contrasena_nueva:
-                    usuario.contrasena = contrasena_nueva
                 usuario.save()
 
                 django_user = request.user
                 django_user.username = nombre_usuario
                 django_user.email = email
                 django_user.save()
+
+                if contrasena_nueva:
+                    actualizar_contrasena(
+                        usuario,
+                        contrasena_nueva,
+                        django_user=django_user,
+                    )
 
                 registrar_en_bitacora(
                     request.user,
@@ -1802,10 +2156,19 @@ def profesional_perfil(request):
 
         cuenta = persona.usuario
         if contrasena_nueva or contrasena_confirmar or contrasena_actual:
-            if not cuenta or contrasena_actual != cuenta.contrasena:
+            if not cuenta or not verificar_contrasena(cuenta, contrasena_actual):
                 errores.append('La contraseña actual es incorrecta.')
             elif not contrasena_nueva or contrasena_nueva != contrasena_confirmar:
                 errores.append('La nueva contraseña y su confirmación no coinciden.')
+            else:
+                try:
+                    validar_contrasena(
+                        contrasena_nueva,
+                        cuenta,
+                        django_user=request.user,
+                    )
+                except ValidationError as exc:
+                    errores.extend(exc.messages)
 
         if errores:
             for error in errores:
@@ -1819,12 +2182,17 @@ def profesional_perfil(request):
 
                 if cuenta:
                     cuenta.email = email
-                    if contrasena_nueva:
-                        cuenta.contrasena = contrasena_nueva
                     cuenta.save()
 
                     request.user.email = email
                     request.user.save()
+
+                    if contrasena_nueva:
+                        actualizar_contrasena(
+                            cuenta,
+                            contrasena_nueva,
+                            django_user=request.user,
+                        )
 
                 messages.success(request, 'Perfil actualizado correctamente.')
             except Exception as e:

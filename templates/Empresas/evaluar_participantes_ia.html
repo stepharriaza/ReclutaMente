@@ -28,13 +28,77 @@
         {% endif %}
 
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold text-gray-900">Asistente IA: define tu criterio</h2>
+                <p class="text-sm text-gray-500 mt-1">Cuéntale a la IA qué buscas y qué enfoque de calificación prefieres. Ella te hará las preguntas necesarias y completará el formulario por ti.</p>
+            </div>
+
+            <div id="eval-assistant-history" class="space-y-3 max-h-80 overflow-y-auto bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm">
+                <div class="flex justify-start">
+                    <div class="bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 max-w-[85%] leading-relaxed">
+                        Hola. Antes de evaluar, ayúdame a definir el criterio. ¿Qué quieres priorizar en los candidatos? Por ejemplo: liderazgo, trabajo en equipo, perfil analítico o experiencia comprobada. También dime qué enfoque de calificación prefieres (equilibrado, estricto, tolerante, priorizar liderazgo, potencial o experiencia).
+                    </div>
+                </div>
+            </div>
+
+            <div id="eval-assistant-sugerencias" class="mt-4 flex flex-wrap gap-2">
+                <button type="button" data-sugerencia="Busco personas con más liderazgo" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Más liderazgo</button>
+                <button type="button" data-sugerencia="Busco un perfil analítico y resolutivo" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Perfil analítico</button>
+                <button type="button" data-sugerencia="Quiero priorizar experiencia comprobada" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Experiencia</button>
+                <button type="button" data-sugerencia="Quiero priorizar el potencial de crecimiento" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Potencial</button>
+            </div>
+
+            <div class="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <input
+                    type="text"
+                    id="eval-assistant-input"
+                    maxlength="2000"
+                    placeholder="Ejemplo: quiero gente con liderazgo y tolerancia al error..."
+                    class="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                <button type="button" id="eval-assistant-send" class="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                    Enviar a la IA
+                </button>
+            </div>
+            <p id="eval-assistant-status" class="text-xs text-gray-500 mt-2"></p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <div class="mb-5">
                 <h2 class="text-lg font-bold text-gray-900">¿Qué buscas en los candidatos?</h2>
                 <p class="text-sm text-gray-500 mt-1">Indica las aptitudes, conocimientos o competencias que quieres evaluar. La IA analizará a cada participante que ya haya completado al menos una prueba.</p>
             </div>
 
+            {% if perfil_objetivo or competencias_seleccionadas or otros_criterios %}
+            <div class="mb-5 flex flex-wrap gap-2 text-xs">
+                {% if perfil_objetivo %}
+                {% for perfil in perfiles %}
+                {% if perfil.valor == perfil_objetivo %}
+                <span class="px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">Perfil: {{ perfil.etiqueta }}</span>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+                {% for competencia in competencias_opciones %}
+                {% if competencia.valor in competencias_seleccionadas %}
+                <span class="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">{{ competencia.etiqueta }}</span>
+                {% endif %}
+                {% endfor %}
+                {% if otros_criterios %}
+                <span class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 font-medium">Otros criterios definidos</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <form method="post" class="space-y-4">
                 {% csrf_token %}
+                {% if perfil_objetivo %}
+                <input type="hidden" name="perfil_objetivo" value="{{ perfil_objetivo }}">
+                {% endif %}
+                {% for competencia in competencias_seleccionadas %}
+                <input type="hidden" name="competencias" value="{{ competencia }}">
+                {% endfor %}
+                {% if otros_criterios %}
+                <input type="hidden" name="otros_criterios" value="{{ otros_criterios }}">
+                {% endif %}
                 <div>
                     <label for="criterios" class="block text-sm font-medium text-gray-700 mb-2">Aptitudes y conocimientos solicitados</label>
                     <textarea
@@ -46,6 +110,32 @@
                         placeholder="Ejemplo: liderazgo, paciencia, trabajo en equipo y capacidad para resolver problemas."
                         class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">{{ criterios }}</textarea>
                     <p class="text-xs text-gray-500 mt-2">Se usarán los mismos criterios para todos los participantes.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="sesgo" class="block text-sm font-medium text-gray-700 mb-2">Sesgo de calificación</label>
+                        <select
+                            id="sesgo"
+                            name="sesgo"
+                            class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                            {% for opcion in sesgos %}
+                            <option value="{{ opcion.valor }}" {% if sesgo == opcion.valor %}selected{% endif %}>{{ opcion.etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-2">Ajusta el peso y la exigencia sobre las competencias evaluadas. Nunca se aplica sobre características personales protegidas.</p>
+                    </div>
+                    <div>
+                        <label for="sesgo_detalle" class="block text-sm font-medium text-gray-700 mb-2">Detalle del enfoque (opcional)</label>
+                        <input
+                            type="text"
+                            id="sesgo_detalle"
+                            name="sesgo_detalle"
+                            maxlength="500"
+                            value="{{ sesgo_detalle }}"
+                            placeholder="Ejemplo: priorizar liderazgo y tolerancia al error"
+                            class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    </div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-t border-gray-100 pt-5">
@@ -82,6 +172,7 @@
             <div class="p-6 border-b border-gray-200 bg-gray-50/50">
                 <h2 class="text-lg font-bold text-gray-900">Ranking de candidatos</h2>
                 <p class="text-sm text-gray-500 mt-1">Resultados generados con los criterios: {{ criterios }}</p>
+                <p class="text-xs text-gray-500 mt-1">Enfoque de calificación: {{ sesgo_label }}</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -176,9 +267,61 @@
                 </div>
 
                 <div class="mt-5 border-t border-gray-100 pt-4">
-                    <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Informe</h4>
+                    <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Informe general</h4>
                     <div class="mt-2 text-sm text-gray-700 leading-relaxed">{{ item.resultado.informe|linebreaksbr }}</div>
                 </div>
+
+                {% if item.pruebas_detalle %}
+                <div class="mt-5 border-t border-gray-100 pt-4">
+                    <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Resultado por prueba</h4>
+                    <div class="mt-3 space-y-3">
+                        {% for detalle in item.pruebas_detalle %}
+                        <div class="border border-gray-200 rounded-xl p-4">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">{{ detalle.resultado.test }}</p>
+                                    {% if detalle.intento %}
+                                    <p class="text-xs text-gray-500">{{ detalle.intento.test.nombre }} · {{ detalle.intento.fecha|date:"d/m/Y H:i" }}</p>
+                                    {% endif %}
+                                </div>
+                                <span class="text-sm font-bold text-gray-900">Puntaje: {{ detalle.resultado.puntaje|default_if_none:"—" }}</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                <div>
+                                    <p class="text-xs uppercase tracking-wider font-semibold text-gray-400">Fortalezas</p>
+                                    {% if detalle.resultado.fortalezas %}
+                                    <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                                        {% for fortaleza in detalle.resultado.fortalezas %}
+                                        <li>{{ fortaleza }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <p class="mt-1 text-sm text-gray-400">Sin fortalezas destacadas.</p>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p class="text-xs uppercase tracking-wider font-semibold text-gray-400">Brechas</p>
+                                    {% if detalle.resultado.brechas %}
+                                    <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                                        {% for brecha in detalle.resultado.brechas %}
+                                        <li>{{ brecha }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                    {% else %}
+                                    <p class="mt-1 text-sm text-gray-400">Sin brechas relevantes.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if detalle.resultado.informe %}
+                            <p class="mt-3 text-sm text-gray-700 leading-relaxed">{{ detalle.resultado.informe|linebreaksbr }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -205,7 +348,32 @@
                         </p>
                         <details class="mt-2">
                             <summary class="cursor-pointer font-medium text-indigo-600">Ver informe guardado</summary>
-                            <div class="mt-2 text-gray-700 leading-relaxed">{{ candidato.analisis.informe_texto|linebreaksbr }}</div>
+                            <div class="mt-2 space-y-1 text-gray-700 leading-relaxed">
+                                {% if candidato.analisis.perfil.criterios %}
+                                <p><span class="font-semibold">Criterios:</span> {{ candidato.analisis.perfil.criterios }}</p>
+                                {% endif %}
+                                {% if candidato.analisis.perfil.sesgo %}
+                                <p><span class="font-semibold">Enfoque:</span> {{ candidato.analisis.perfil.sesgo }}{% if candidato.analisis.perfil.sesgo_detalle %} · {{ candidato.analisis.perfil.sesgo_detalle }}{% endif %}</p>
+                                {% endif %}
+                                {% if candidato.analisis.perfil.perfil_objetivo %}
+                                {% for perfil in perfiles %}
+                                {% if perfil.valor == candidato.analisis.perfil.perfil_objetivo %}
+                                <p><span class="font-semibold">Perfil:</span> {{ perfil.etiqueta }}</p>
+                                {% endif %}
+                                {% endfor %}
+                                {% endif %}
+                                {% if candidato.analisis.perfil.competencias %}
+                                <p><span class="font-semibold">Competencias:</span>
+                                    {% for competencia in competencias_opciones %}
+                                    {% if competencia.valor in candidato.analisis.perfil.competencias %}{{ competencia.etiqueta }}{% if not forloop.last %}, {% endif %}{% endif %}
+                                    {% endfor %}
+                                </p>
+                                {% endif %}
+                                {% for prueba in candidato.analisis.perfil.pruebas %}
+                                <p><span class="font-semibold">{{ prueba.test }}:</span> {{ prueba.puntaje|default_if_none:"—" }}{% if prueba.informe %} · {{ prueba.informe }}{% endif %}</p>
+                                {% endfor %}
+                                <div>{{ candidato.analisis.informe_texto|linebreaksbr }}</div>
+                            </div>
                         </details>
                     </div>
                     {% else %}
@@ -219,4 +387,110 @@
 
     </div>
 </div>
+
+<script>
+(function () {
+    const historyEl = document.getElementById('eval-assistant-history');
+    const inputEl = document.getElementById('eval-assistant-input');
+    const sendBtn = document.getElementById('eval-assistant-send');
+    const statusEl = document.getElementById('eval-assistant-status');
+    const criteriosEl = document.getElementById('criterios');
+    const sesgoEl = document.getElementById('sesgo');
+    const sesgoDetalleEl = document.getElementById('sesgo_detalle');
+
+    if (!historyEl || !inputEl || !sendBtn) return;
+
+    const historial = [];
+    let enviando = false;
+
+    function agregarBurbuja(texto, autor) {
+        const fila = document.createElement('div');
+        fila.className = autor === 'usuario' ? 'flex justify-end' : 'flex justify-start';
+
+        const burbuja = document.createElement('div');
+        burbuja.className = autor === 'usuario'
+            ? 'bg-indigo-600 text-white p-3 rounded-lg max-w-[85%] leading-relaxed whitespace-pre-line'
+            : 'bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 max-w-[85%] leading-relaxed whitespace-pre-line';
+        burbuja.textContent = texto;
+
+        fila.appendChild(burbuja);
+        historyEl.appendChild(fila);
+        historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    async function enviarAsistente(texto) {
+        texto = (texto || '').trim();
+        if (!texto || enviando) return;
+
+        enviando = true;
+        sendBtn.disabled = true;
+        statusEl.textContent = 'La IA está analizando tu solicitud...';
+        agregarBurbuja(texto, 'usuario');
+        historial.push({ rol: 'usuario', contenido: texto });
+        inputEl.value = '';
+
+        try {
+            const response = await fetch("{% url 'api_asistente_criterios_evaluacion' plaza.id %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    mensaje: texto,
+                    historial: historial.slice(-12),
+                    criterios: criteriosEl ? criteriosEl.value : '',
+                    sesgo: sesgoEl ? sesgoEl.value : ''
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'No se pudo obtener respuesta de la IA.');
+            }
+
+            agregarBurbuja(data.respuesta || 'Listo.', 'asistente');
+            historial.push({ rol: 'asistente', contenido: data.respuesta || '' });
+
+            if (data.criterios && criteriosEl) {
+                criteriosEl.value = data.criterios;
+            }
+            if (data.sesgo && sesgoEl) {
+                sesgoEl.value = data.sesgo;
+            }
+            if (data.sesgo_detalle && sesgoDetalleEl) {
+                sesgoDetalleEl.value = data.sesgo_detalle;
+            }
+
+            statusEl.textContent = data.listo
+                ? 'Criterios y enfoque definidos. Revisa el formulario y presiona "Evaluar participantes".'
+                : 'Puedes seguir conversando con la IA para afinar el criterio.';
+        } catch (error) {
+            agregarBurbuja('No pude procesar tu solicitud: ' + error.message, 'asistente');
+            statusEl.textContent = 'Ocurrió un error. Intenta nuevamente.';
+        } finally {
+            enviando = false;
+            sendBtn.disabled = false;
+            inputEl.focus();
+        }
+    }
+
+    sendBtn.addEventListener('click', function () {
+        enviarAsistente(inputEl.value);
+    });
+
+    inputEl.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            enviarAsistente(inputEl.value);
+        }
+    });
+
+    document.querySelectorAll('[data-sugerencia]').forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            enviarAsistente(boton.getAttribute('data-sugerencia'));
+        });
+    });
+})();
+</script>
 {% endblock %}

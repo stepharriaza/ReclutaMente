@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path
+from core import auth_views
 from . import views
 
 urlpatterns = [
@@ -29,6 +30,26 @@ urlpatterns = [
     path('registro/', views.registro_view, name='registro'),
     path('logout/', views.logout_view, name='logout'),
     path('login/', views.login_view, name='login'),
+    path(
+        'password-reset/',
+        auth_views.password_reset_request,
+        name='password_reset',
+    ),
+    path(
+        'password-reset/enviado/',
+        auth_views.password_reset_done,
+        name='password_reset_done',
+    ),
+    path(
+        'password-reset/<uidb64>/<token>/',
+        auth_views.password_reset_confirm,
+        name='password_reset_confirm',
+    ),
+    path(
+        'password-reset/completo/',
+        auth_views.password_reset_complete,
+        name='password_reset_complete',
+    ),
     path(
         'test/<int:test_id>/', 
         views.test, 
@@ -72,6 +93,10 @@ urlpatterns = [
         'empresa/vacantes/<int:pk>/evaluar-ia/',
         views.empresa_evaluar_participantes_ia,
         name='empresa_evaluar_participantes_ia'),
+    path(
+        'empresa/vacantes/<int:pk>/asistente-criterios/',
+        views.api_asistente_criterios_evaluacion,
+        name='api_asistente_criterios_evaluacion'),
     # URL Super admin
     path(
         'superadmin/perfil/', 
