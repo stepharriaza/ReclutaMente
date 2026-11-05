@@ -246,6 +246,100 @@ def _construir_evidencia_candidato(intentos):
     return '\n'.join(lineas)
 
 
+def _dimensiones_intento(intento):
+    """Devuelve el desglose por dimensión de un intento como dict numérico."""
+    if not intento or not intento.puntaje_dimensiones:
+        return {}
+    try:
+        datos = json.loads(intento.puntaje_dimensiones)
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(datos, dict):
+        return {}
+
+    dimensiones = {}
+    for nombre, valor in datos.items():
+        try:
+            dimensiones[str(nombre)] = float(valor)
+        except (TypeError, ValueError):
+            continue
+    return dimensiones
+
+
+def _barras_dimensiones(intentos):
+    """Agrupa los puntajes por dimensión y los normaliza para graficarlos."""
+    totales = {}
+    for intento in intentos or []:
+        for nombre, valor in _dimensiones_intento(intento).items():
+            totales[nombre] = totales.get(nombre, 0) + valor
+
+    if not totales:
+        return []
+
+    maximo = max(totales.values()) or 1
+    barras = []
+    for nombre, valor in sorted(
+        totales.items(), key=lambda elemento: elemento[1], reverse=True
+    ):
+        barras.append(
+            {
+                'nombre': nombre,
+                'valor': round(valor, 1),
+                'porcentaje': round((valor / maximo) * 100, 1),
+            }
+        )
+    return barras
+
+
+def _barras_pruebas(resultado):
+    """Convierte el puntaje 0-100 de cada prueba en barras para la gráfica."""
+    barras = []
+    for prueba in (resultado or {}).get('pruebas') or []:
+        try:
+            valor = float(prueba.get('puntaje'))
+        except (TypeError, ValueError):
+            continue
+        valor = max(0.0, min(100.0, valor))
+        barras.append(
+            {
+                'nombre': prueba.get('test') or 'Prueba',
+                'valor': round(valor, 1),
+                'porcentaje': round(valor, 1),
+            }
+        )
+    return barras
+
+
+def _nivel_puntaje(puntaje):
+    """Clasifica el puntaje global para dar color y contexto en el informe."""
+    try:
+        valor = float(puntaje)
+    except (TypeError, ValueError):
+        return {
+            'etiqueta': 'Sin puntaje',
+            'descripcion': 'La IA no asignó un puntaje global.',
+            'color': '#6366f1',
+        }
+
+    if valor >= 80:
+        return {
+            'etiqueta': 'Desempeño alto',
+            'descripcion': 'Puntaje alto: cumple ampliamente con el criterio evaluado.',
+            'color': '#10b981',
+        }
+    if valor >= 60:
+        return {
+            'etiqueta': 'Desempeño medio',
+            'descripcion': 'Puntaje medio: cumple parcialmente con el criterio evaluado.',
+            'color': '#6366f1',
+        }
+    return {
+        'etiqueta': 'Desempeño bajo',
+        'descripcion': 'Puntaje bajo: hay brechas importantes frente al criterio evaluado.',
+        'color': '#ef4444',
+    }
+
+
 def _guardar_analisis_ia(
     intentos,
     criterios,
@@ -1478,6 +1572,16 @@ def empresa_evaluar_participantes_ia(request, pk):
                     }
                 )
 
+            for item in resultados_ia:
+                item['nivel'] = _nivel_puntaje(item['resultado'].get('puntaje'))
+                item['barras_pruebas'] = _barras_pruebas(item['resultado'])
+                item['barras_dimensiones'] = _barras_dimensiones(item['intentos'])
+                for detalle in item['pruebas_detalle']:
+                    intento = detalle.get('intento')
+                    detalle['barras_dimensiones'] = (
+                        _barras_dimensiones([intento]) if intento else []
+                    )
+
             resultados_ia.sort(
                 key=lambda item: (
                     item['resultado'].get('puntaje') is None,
@@ -1500,11 +1604,18 @@ def empresa_evaluar_participantes_ia(request, pk):
     for intentos in grupos:
         representante = intentos[0]
         analisis = AnalisisIA.objects.filter(intento=representante).first()
+        perfil_guardado = (
+            analisis.perfil
+            if analisis and isinstance(analisis.perfil, dict)
+            else {}
+        )
         candidatos.append(
             {
                 'persona': representante.persona,
                 'intentos': intentos,
                 'analisis': analisis,
+                'nivel': _nivel_puntaje(perfil_guardado.get('puntaje')),
+                'barras_dimensiones': _barras_dimensiones(intentos),
             }
         )
 

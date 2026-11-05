@@ -27,125 +27,106 @@
         </div>
         {% endif %}
 
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-            <div class="mb-4">
-                <h2 class="text-lg font-bold text-gray-900">Asistente IA: define tu criterio</h2>
-                <p class="text-sm text-gray-500 mt-1">Cuéntale a la IA qué buscas y qué enfoque de calificación prefieres. Ella te hará las preguntas necesarias y completará el formulario por ti.</p>
-            </div>
-
-            <div id="eval-assistant-history" class="space-y-3 max-h-80 overflow-y-auto bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm">
-                <div class="flex justify-start">
-                    <div class="bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 max-w-[85%] leading-relaxed">
-                        Hola. Antes de evaluar, ayúdame a definir el criterio. ¿Qué quieres priorizar en los candidatos? Por ejemplo: liderazgo, trabajo en equipo, perfil analítico o experiencia comprobada. También dime qué enfoque de calificación prefieres (equilibrado, estricto, tolerante, priorizar liderazgo, potencial o experiencia).
+        <div id="asistente-ia" class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-950 to-indigo-800 px-6 py-5 text-white">
+                <div class="flex items-start gap-3">
+                    <div class="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-lg">✨</div>
+                    <div>
+                        <h2 class="text-lg font-bold">Asistente IA: define tu criterio</h2>
+                        <p class="text-sm text-indigo-200 mt-1">Conversa con la IA. Ella te hará las preguntas necesarias y actualizará el criterio de evaluación automáticamente.</p>
                     </div>
                 </div>
             </div>
 
-            <div id="eval-assistant-sugerencias" class="mt-4 flex flex-wrap gap-2">
-                <button type="button" data-sugerencia="Busco personas con más liderazgo" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Más liderazgo</button>
-                <button type="button" data-sugerencia="Busco un perfil analítico y resolutivo" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Perfil analítico</button>
-                <button type="button" data-sugerencia="Quiero priorizar experiencia comprobada" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Experiencia</button>
-                <button type="button" data-sugerencia="Quiero priorizar el potencial de crecimiento" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Potencial</button>
-            </div>
+            <div class="p-6">
+                <div id="eval-assistant-history" class="space-y-3 max-h-80 overflow-y-auto bg-gray-50 border border-gray-100 rounded-xl p-4 text-sm">
+                    <div class="flex justify-start">
+                        <div class="bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 max-w-[85%] leading-relaxed">
+                            Hola. Antes de evaluar, ayúdame a definir el criterio. ¿Qué quieres priorizar en los candidatos? Por ejemplo: liderazgo, trabajo en equipo, perfil analítico o experiencia comprobada. También dime qué enfoque de calificación prefieres (equilibrado, estricto, tolerante, priorizar liderazgo, potencial o experiencia).
+                        </div>
+                    </div>
+                </div>
 
-            <div class="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <input
-                    type="text"
-                    id="eval-assistant-input"
-                    maxlength="2000"
-                    placeholder="Ejemplo: quiero gente con liderazgo y tolerancia al error..."
-                    class="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                <button type="button" id="eval-assistant-send" class="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
-                    Enviar a la IA
-                </button>
+                <div id="eval-assistant-sugerencias" class="mt-4 flex flex-wrap gap-2">
+                    <button type="button" data-sugerencia="Busco personas con más liderazgo" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Más liderazgo</button>
+                    <button type="button" data-sugerencia="Busco un perfil analítico y resolutivo" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Perfil analítico</button>
+                    <button type="button" data-sugerencia="Quiero priorizar experiencia comprobada" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Experiencia</button>
+                    <button type="button" data-sugerencia="Quiero priorizar el potencial de crecimiento" class="text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-full transition">Potencial</button>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <input
+                        type="text"
+                        id="eval-assistant-input"
+                        maxlength="2000"
+                        placeholder="Ejemplo: quiero gente con liderazgo y tolerancia al error..."
+                        class="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
+                    <button type="button" id="eval-assistant-send" class="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                        Enviar a la IA
+                    </button>
+                </div>
+                <p id="eval-assistant-status" class="text-xs text-gray-500 mt-2"></p>
             </div>
-            <p id="eval-assistant-status" class="text-xs text-gray-500 mt-2"></p>
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-            <div class="mb-5">
-                <h2 class="text-lg font-bold text-gray-900">¿Qué buscas en los candidatos?</h2>
-                <p class="text-sm text-gray-500 mt-1">Indica las aptitudes, conocimientos o competencias que quieres evaluar. La IA analizará a cada participante que ya haya completado al menos una prueba.</p>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">Criterio de evaluación definido</h2>
+                    <p class="text-sm text-gray-500 mt-1">La IA usará este criterio para evaluar a todos los participantes de la vacante.</p>
+                </div>
+                <a href="#asistente-ia" class="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                    Ajustar con la IA
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                </a>
             </div>
 
-            {% if perfil_objetivo or competencias_seleccionadas or otros_criterios %}
-            <div class="mb-5 flex flex-wrap gap-2 text-xs">
-                {% if perfil_objetivo %}
-                {% for perfil in perfiles %}
-                {% if perfil.valor == perfil_objetivo %}
-                <span class="px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-medium">Perfil: {{ perfil.etiqueta }}</span>
+            <div class="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 sm:p-5">
+                {% if perfil_objetivo or competencias_seleccionadas or otros_criterios %}
+                <div class="flex flex-wrap gap-2 text-xs">
+                    {% if perfil_objetivo %}
+                    {% for perfil in perfiles %}
+                    {% if perfil.valor == perfil_objetivo %}
+                    <span class="px-3 py-1.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">Perfil: {{ perfil.etiqueta }}</span>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                    {% for competencia in competencias_opciones %}
+                    {% if competencia.valor in competencias_seleccionadas %}
+                    <span class="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">{{ competencia.etiqueta }}</span>
+                    {% endif %}
+                    {% endfor %}
+                    {% if otros_criterios %}
+                    <span class="px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium">Otros criterios definidos</span>
+                    {% endif %}
+                </div>
                 {% endif %}
-                {% endfor %}
-                {% endif %}
-                {% for competencia in competencias_opciones %}
-                {% if competencia.valor in competencias_seleccionadas %}
-                <span class="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">{{ competencia.etiqueta }}</span>
-                {% endif %}
-                {% endfor %}
-                {% if otros_criterios %}
-                <span class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 font-medium">Otros criterios definidos</span>
-                {% endif %}
+                <p id="criterios-preview" class="mt-3 text-sm text-gray-700 whitespace-pre-line">{{ criterios|default:"Aún no hay criterios definidos. Conversa con el asistente para definirlos." }}</p>
+                <p class="mt-3 text-xs text-gray-500">Enfoque de calificación: <span id="sesgo-preview" class="font-semibold text-gray-700">{{ sesgo_label }}</span></p>
             </div>
-            {% endif %}
 
-            <form method="post" class="space-y-4">
+            <form method="post" class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 {% csrf_token %}
-                {% if perfil_objetivo %}
                 <input type="hidden" name="perfil_objetivo" value="{{ perfil_objetivo }}">
-                {% endif %}
                 {% for competencia in competencias_seleccionadas %}
                 <input type="hidden" name="competencias" value="{{ competencia }}">
                 {% endfor %}
-                {% if otros_criterios %}
                 <input type="hidden" name="otros_criterios" value="{{ otros_criterios }}">
-                {% endif %}
-                <div>
-                    <label for="criterios" class="block text-sm font-medium text-gray-700 mb-2">Aptitudes y conocimientos solicitados</label>
-                    <textarea
-                        id="criterios"
-                        name="criterios"
-                        rows="5"
-                        maxlength="2000"
-                        required
-                        placeholder="Ejemplo: liderazgo, paciencia, trabajo en equipo y capacidad para resolver problemas."
-                        class="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">{{ criterios }}</textarea>
-                    <p class="text-xs text-gray-500 mt-2">Se usarán los mismos criterios para todos los participantes.</p>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label for="sesgo" class="block text-sm font-medium text-gray-700 mb-2">Sesgo de calificación</label>
-                        <select
-                            id="sesgo"
-                            name="sesgo"
-                            class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                            {% for opcion in sesgos %}
-                            <option value="{{ opcion.valor }}" {% if sesgo == opcion.valor %}selected{% endif %}>{{ opcion.etiqueta }}</option>
-                            {% endfor %}
-                        </select>
-                        <p class="text-xs text-gray-500 mt-2">Ajusta el peso y la exigencia sobre las competencias evaluadas. Nunca se aplica sobre características personales protegidas.</p>
-                    </div>
-                    <div>
-                        <label for="sesgo_detalle" class="block text-sm font-medium text-gray-700 mb-2">Detalle del enfoque (opcional)</label>
-                        <input
-                            type="text"
-                            id="sesgo_detalle"
-                            name="sesgo_detalle"
-                            maxlength="500"
-                            value="{{ sesgo_detalle }}"
-                            placeholder="Ejemplo: priorizar liderazgo y tolerancia al error"
-                            class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition">
-                    </div>
-                </div>
-
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-t border-gray-100 pt-5">
-                    <p class="text-sm text-gray-600">
-                        Participantes con pruebas completadas: <span class="font-semibold text-gray-900">{{ total_candidatos }}</span>
-                    </p>
-                    <button type="submit" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
-                        Evaluar participantes
-                    </button>
-                </div>
+                <input type="hidden" name="criterios" id="criterios" value="{{ criterios }}">
+                <input type="hidden" name="sesgo_detalle" id="sesgo_detalle" value="{{ sesgo_detalle }}">
+                <select id="sesgo" name="sesgo" class="hidden">
+                    {% for opcion in sesgos %}
+                    <option value="{{ opcion.valor }}" {% if sesgo == opcion.valor %}selected{% endif %}>{{ opcion.etiqueta }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-sm text-gray-600">
+                    Participantes con pruebas completadas: <span class="font-semibold text-gray-900">{{ total_candidatos }}</span>
+                </p>
+                <button type="submit" {% if not total_candidatos or not criterios %}disabled{% endif %} class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                    Evaluar participantes
+                </button>
             </form>
         </div>
 
@@ -170,11 +151,35 @@
         {% if resultados_ia %}
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="p-6 border-b border-gray-200 bg-gray-50/50">
-                <h2 class="text-lg font-bold text-gray-900">Ranking de candidatos</h2>
-                <p class="text-sm text-gray-500 mt-1">Resultados generados con los criterios: {{ criterios }}</p>
-                <p class="text-xs text-gray-500 mt-1">Enfoque de calificación: {{ sesgo_label }}</p>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Ranking de candidatos</h2>
+                        <p class="text-sm text-gray-500 mt-1">Resultados generados con el criterio de evaluación definido.</p>
+                    </div>
+                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700">{{ sesgo_label }}</span>
+                </div>
+                <details class="mt-3">
+                    <summary class="cursor-pointer text-xs font-medium text-indigo-600">Ver criterios usados</summary>
+                    <p class="mt-2 text-xs text-gray-600 whitespace-pre-line">{{ criterios }}</p>
+                </details>
             </div>
-            <div class="overflow-x-auto">
+
+            <div class="px-6 pt-6">
+                <h3 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Comparativa de puntaje global</h3>
+                <div class="mt-3 space-y-3">
+                    {% for item in resultados_ia %}
+                    <div class="flex items-center gap-3">
+                        <span class="w-36 sm:w-48 shrink-0 truncate text-sm text-gray-700">{{ item.persona.nombre }}</span>
+                        <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all" style="width: {{ item.resultado.puntaje|default:0 }}%; background-color: {{ item.nivel.color }};"></div>
+                        </div>
+                        <span class="w-10 text-right text-sm font-semibold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="overflow-x-auto mt-4">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
@@ -199,7 +204,14 @@
                                 {{ intento.test.nombre }}{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             </td>
-                            <td class="py-4 px-6 font-bold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</td>
+                            <td class="py-4 px-6">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
+                                    <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width: {{ item.resultado.puntaje|default:0 }}%; background-color: {{ item.nivel.color }};"></div>
+                                    </div>
+                                </div>
+                            </td>
                             <td class="py-4 px-6">
                                 {% if item.resultado.recomendacion == 'Apto' %}
                                 <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">{{ item.resultado.recomendacion }}</span>
@@ -219,116 +231,228 @@
             </div>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-6">
             {% for item in resultados_ia %}
-            <div id="informe-{{ item.persona.id }}" class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 pb-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-gray-900">{{ item.persona.nombre }}</h3>
-                        <p class="text-xs text-gray-500">{{ item.persona.email }}</p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm font-semibold text-gray-700">Puntaje: {{ item.resultado.puntaje|default_if_none:"—" }}</span>
-                        {% if item.resultado.recomendacion == 'Apto' %}
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">{{ item.resultado.recomendacion }}</span>
-                        {% elif item.resultado.recomendacion == 'No apto' %}
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">{{ item.resultado.recomendacion }}</span>
-                        {% else %}
-                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">{{ item.resultado.recomendacion }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-5">
-                    <div>
-                        <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Fortalezas</h4>
-                        {% if item.resultado.fortalezas %}
-                        <ul class="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                            {% for fortaleza in item.resultado.fortalezas %}
-                            <li>{{ fortaleza }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p class="mt-2 text-sm text-gray-400">No se identificaron fortalezas destacadas.</p>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Brechas / áreas de mejora</h4>
-                        {% if item.resultado.brechas %}
-                        <ul class="mt-2 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                            {% for brecha in item.resultado.brechas %}
-                            <li>{{ brecha }}</li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <p class="mt-2 text-sm text-gray-400">No se identificaron brechas relevantes.</p>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="mt-5 border-t border-gray-100 pt-4">
-                    <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Informe general</h4>
-                    <div class="mt-2 text-sm text-gray-700 leading-relaxed">{{ item.resultado.informe|linebreaksbr }}</div>
-                </div>
-
-                {% if item.pruebas_detalle %}
-                <div class="mt-5 border-t border-gray-100 pt-4">
-                    <h4 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Resultado por prueba</h4>
-                    <div class="mt-3 space-y-3">
-                        {% for detalle in item.pruebas_detalle %}
-                        <div class="border border-gray-200 rounded-xl p-4">
-                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900">{{ detalle.resultado.test }}</p>
-                                    {% if detalle.intento %}
-                                    <p class="text-xs text-gray-500">{{ detalle.intento.test.nombre }} · {{ detalle.intento.fecha|date:"d/m/Y H:i" }}</p>
-                                    {% endif %}
-                                </div>
-                                <span class="text-sm font-bold text-gray-900">Puntaje: {{ detalle.resultado.puntaje|default_if_none:"—" }}</span>
+            <div id="informe-{{ item.persona.id }}" class="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+                <div class="bg-gradient-to-br from-indigo-950 via-indigo-900 to-indigo-800 p-6 sm:p-8 text-white">
+                    <div class="flex flex-col lg:flex-row justify-between gap-6">
+                        <div class="flex items-start gap-4">
+                            <div class="h-14 w-14 shrink-0 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-bold">
+                                {{ item.persona.nombre|slice:":1"|upper }}
                             </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-                                <div>
-                                    <p class="text-xs uppercase tracking-wider font-semibold text-gray-400">Fortalezas</p>
-                                    {% if detalle.resultado.fortalezas %}
-                                    <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                                        {% for fortaleza in detalle.resultado.fortalezas %}
-                                        <li>{{ fortaleza }}</li>
-                                        {% endfor %}
-                                    </ul>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-[0.22em] text-indigo-300">Informe de evaluación</p>
+                                <h3 class="text-2xl font-bold mt-1">{{ item.persona.nombre }}</h3>
+                                <p class="text-sm text-indigo-200 mt-1">{{ item.persona.email }}</p>
+                                <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                                    <span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100">{{ item.nivel.etiqueta }}</span>
+                                    {% if item.resultado.recomendacion == 'Apto' %}
+                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">{{ item.resultado.recomendacion }}</span>
+                                    {% elif item.resultado.recomendacion == 'No apto' %}
+                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-red-400/15 text-red-200 border border-red-300/30">{{ item.resultado.recomendacion }}</span>
                                     {% else %}
-                                    <p class="mt-1 text-sm text-gray-400">Sin fortalezas destacadas.</p>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    <p class="text-xs uppercase tracking-wider font-semibold text-gray-400">Brechas</p>
-                                    {% if detalle.resultado.brechas %}
-                                    <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                                        {% for brecha in detalle.resultado.brechas %}
-                                        <li>{{ brecha }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                    {% else %}
-                                    <p class="mt-1 text-sm text-gray-400">Sin brechas relevantes.</p>
+                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/30">{{ item.resultado.recomendacion }}</span>
                                     {% endif %}
                                 </div>
                             </div>
+                        </div>
 
-                            {% if detalle.resultado.informe %}
-                            <p class="mt-3 text-sm text-gray-700 leading-relaxed">{{ detalle.resultado.informe|linebreaksbr }}</p>
+                        <div class="flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 p-4">
+                            <div class="relative h-24 w-24 shrink-0 rounded-full" style="background: conic-gradient({{ item.nivel.color }} {{ item.resultado.puntaje|default:0 }}%, rgba(255,255,255,0.15) 0);">
+                                <div class="absolute inset-2.5 rounded-full bg-indigo-950 flex flex-col items-center justify-center">
+                                    <span class="text-2xl font-bold leading-none">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
+                                    <span class="text-[10px] uppercase tracking-wider text-indigo-300 mt-1">/ 100</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-wider text-indigo-300">Puntaje global</p>
+                                <p class="text-sm text-indigo-100 mt-1 max-w-[13rem] leading-relaxed">{{ item.nivel.descripcion }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 sm:p-8 space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="text-sm font-bold text-gray-900">Desempeño por prueba</h4>
+                                <span class="text-[10px] uppercase tracking-wider text-gray-400">Escala 0-100</span>
+                            </div>
+                            {% if item.barras_pruebas %}
+                            <div class="mt-4 space-y-3">
+                                {% for barra in item.barras_pruebas %}
+                                <div>
+                                    <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                        <span class="truncate">{{ barra.nombre }}</span>
+                                        <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                    </div>
+                                    <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width: {{ barra.porcentaje }}%; background-color: {{ item.nivel.color }};"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="mt-3 text-sm text-gray-400">La IA no devolvió un puntaje por prueba.</p>
                             {% endif %}
                         </div>
-                        {% endfor %}
+
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="text-sm font-bold text-gray-900">Distribución por dimensión</h4>
+                                <span class="text-[10px] uppercase tracking-wider text-gray-400">Intensidad relativa</span>
+                            </div>
+                            {% if item.barras_dimensiones %}
+                            <div class="mt-4 space-y-3">
+                                {% for barra in item.barras_dimensiones %}
+                                <div>
+                                    <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                        <span class="truncate">{{ barra.nombre }}</span>
+                                        <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                    </div>
+                                    <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <p class="mt-3 text-[11px] text-gray-400">La dimensión con mayor puntaje se muestra al 100%. Los valores son la suma de puntos obtenidos en cada dimensión.</p>
+                            {% else %}
+                            <p class="mt-3 text-sm text-gray-400">Esta evaluación no registró un desglose por dimensión.</p>
+                            {% endif %}
+                        </div>
                     </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
+                            <div class="flex items-center gap-2">
+                                <span class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">✓</span>
+                                <h4 class="text-sm font-bold text-emerald-900">Fortalezas</h4>
+                            </div>
+                            {% if item.resultado.fortalezas %}
+                            <ul class="mt-3 space-y-2 text-sm text-emerald-900">
+                                {% for fortaleza in item.resultado.fortalezas %}
+                                <li class="flex gap-2">
+                                    <span class="mt-0.5 text-emerald-600 font-bold">✓</span>
+                                    <span>{{ fortaleza }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="mt-3 text-sm text-emerald-700/60">No se identificaron fortalezas destacadas.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
+                            <div class="flex items-center gap-2">
+                                <span class="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">!</span>
+                                <h4 class="text-sm font-bold text-amber-900">Brechas / áreas de mejora</h4>
+                            </div>
+                            {% if item.resultado.brechas %}
+                            <ul class="mt-3 space-y-2 text-sm text-amber-900">
+                                {% for brecha in item.resultado.brechas %}
+                                <li class="flex gap-2">
+                                    <span class="mt-0.5 text-amber-600 font-bold">!</span>
+                                    <span>{{ brecha }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="mt-3 text-sm text-amber-700/60">No se identificaron brechas relevantes.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-gray-200 p-5 sm:p-6">
+                        <div class="flex items-center gap-2">
+                            <span class="h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">✦</span>
+                            <h4 class="text-sm font-bold text-gray-900">Informe general de la IA</h4>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-700 leading-relaxed">{{ item.resultado.informe|linebreaksbr }}</div>
+                    </div>
+
+                    {% if item.pruebas_detalle %}
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-900">Detalle por prueba</h4>
+                        <div class="mt-3 space-y-3">
+                            {% for detalle in item.pruebas_detalle %}
+                            <details class="group rounded-2xl border border-gray-200 bg-white" {% if forloop.first %}open{% endif %}>
+                                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900">{{ detalle.resultado.test }}</p>
+                                        {% if detalle.intento %}
+                                        <p class="text-xs text-gray-500">{{ detalle.intento.test.nombre }} · {{ detalle.intento.fecha|date:"d/m/Y H:i" }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm font-bold text-gray-900">{{ detalle.resultado.puntaje|default_if_none:"—" }}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </summary>
+                                <div class="border-t border-gray-100 p-4 space-y-4">
+                                    {% if detalle.barras_dimensiones %}
+                                    <div class="space-y-2">
+                                        {% for barra in detalle.barras_dimensiones %}
+                                        <div>
+                                            <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                                <span class="truncate">{{ barra.nombre }}</span>
+                                                <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                            </div>
+                                            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs uppercase tracking-wider font-semibold text-emerald-700">Fortalezas</p>
+                                            {% if detalle.resultado.fortalezas %}
+                                            <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                                                {% for fortaleza in detalle.resultado.fortalezas %}
+                                                <li>{{ fortaleza }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% else %}
+                                            <p class="mt-1 text-sm text-gray-400">Sin fortalezas destacadas.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <p class="text-xs uppercase tracking-wider font-semibold text-amber-700">Brechas</p>
+                                            {% if detalle.resultado.brechas %}
+                                            <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                                                {% for brecha in detalle.resultado.brechas %}
+                                                <li>{{ brecha }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% else %}
+                                            <p class="mt-1 text-sm text-gray-400">Sin brechas relevantes.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {% if detalle.resultado.informe %}
+                                    <p class="text-sm text-gray-700 leading-relaxed">{{ detalle.resultado.informe|linebreaksbr }}</p>
+                                    {% endif %}
+                                </div>
+                            </details>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
         {% elif total_candidatos %}
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900">Participantes que se evaluarán</h2>
-            <p class="text-sm text-gray-500 mt-1">Completa los criterios y presiona “Evaluar participantes”.</p>
+            <p class="text-sm text-gray-500 mt-1">Revisa el criterio definido y presiona “Evaluar participantes”.</p>
             <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {% for candidato in candidatos %}
                 <div class="border border-gray-200 rounded-xl p-4">
@@ -349,6 +473,22 @@
                         <details class="mt-2">
                             <summary class="cursor-pointer font-medium text-indigo-600">Ver informe guardado</summary>
                             <div class="mt-2 space-y-1 text-gray-700 leading-relaxed">
+                                {% if candidato.barras_dimensiones %}
+                                <div class="mb-3 space-y-2">
+                                    <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Distribución por dimensión</p>
+                                    {% for barra in candidato.barras_dimensiones %}
+                                    <div>
+                                        <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                            <span class="truncate">{{ barra.nombre }}</span>
+                                            <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                        </div>
+                                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
                                 {% if candidato.analisis.perfil.criterios %}
                                 <p><span class="font-semibold">Criterios:</span> {{ candidato.analisis.perfil.criterios }}</p>
                                 {% endif %}
@@ -397,6 +537,8 @@
     const criteriosEl = document.getElementById('criterios');
     const sesgoEl = document.getElementById('sesgo');
     const sesgoDetalleEl = document.getElementById('sesgo_detalle');
+    const criteriosPreviewEl = document.getElementById('criterios-preview');
+    const sesgoPreviewEl = document.getElementById('sesgo-preview');
 
     if (!historyEl || !inputEl || !sendBtn) return;
 
@@ -418,6 +560,32 @@
         historyEl.scrollTop = historyEl.scrollHeight;
     }
 
+    function mostrarEscribiendo() {
+        quitarEscribiendo();
+        const fila = document.createElement('div');
+        fila.id = 'eval-assistant-typing';
+        fila.className = 'flex justify-start';
+
+        const burbuja = document.createElement('div');
+        burbuja.className = 'bg-indigo-50 text-indigo-900 p-3 rounded-lg border border-indigo-100 flex items-center gap-1.5';
+
+        [0, 1, 2].forEach(function (indice) {
+            const punto = document.createElement('span');
+            punto.className = 'h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce';
+            punto.style.animationDelay = (indice * 120) + 'ms';
+            burbuja.appendChild(punto);
+        });
+
+        fila.appendChild(burbuja);
+        historyEl.appendChild(fila);
+        historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function quitarEscribiendo() {
+        const indicador = document.getElementById('eval-assistant-typing');
+        if (indicador) indicador.remove();
+    }
+
     async function enviarAsistente(texto) {
         texto = (texto || '').trim();
         if (!texto || enviando) return;
@@ -428,6 +596,7 @@
         agregarBurbuja(texto, 'usuario');
         historial.push({ rol: 'usuario', contenido: texto });
         inputEl.value = '';
+        mostrarEscribiendo();
 
         try {
             const response = await fetch("{% url 'api_asistente_criterios_evaluacion' plaza.id %}", {
@@ -449,11 +618,15 @@
                 throw new Error(data.error || 'No se pudo obtener respuesta de la IA.');
             }
 
+            quitarEscribiendo();
             agregarBurbuja(data.respuesta || 'Listo.', 'asistente');
             historial.push({ rol: 'asistente', contenido: data.respuesta || '' });
 
             if (data.criterios && criteriosEl) {
                 criteriosEl.value = data.criterios;
+                if (criteriosPreviewEl) {
+                    criteriosPreviewEl.textContent = data.criterios;
+                }
             }
             if (data.sesgo && sesgoEl) {
                 sesgoEl.value = data.sesgo;
@@ -461,14 +634,22 @@
             if (data.sesgo_detalle && sesgoDetalleEl) {
                 sesgoDetalleEl.value = data.sesgo_detalle;
             }
+            if (sesgoPreviewEl) {
+                const opcion = sesgoEl ? sesgoEl.options[sesgoEl.selectedIndex] : null;
+                const etiqueta = opcion ? opcion.textContent : (data.sesgo || '');
+                const detalle = sesgoDetalleEl ? sesgoDetalleEl.value.trim() : '';
+                sesgoPreviewEl.textContent = detalle ? etiqueta + ' · ' + detalle : etiqueta;
+            }
 
             statusEl.textContent = data.listo
-                ? 'Criterios y enfoque definidos. Revisa el formulario y presiona "Evaluar participantes".'
+                ? 'Criterio actualizado. Revisa el resumen y presiona "Evaluar participantes".'
                 : 'Puedes seguir conversando con la IA para afinar el criterio.';
         } catch (error) {
+            quitarEscribiendo();
             agregarBurbuja('No pude procesar tu solicitud: ' + error.message, 'asistente');
             statusEl.textContent = 'Ocurrió un error. Intenta nuevamente.';
         } finally {
+            quitarEscribiendo();
             enviando = false;
             sendBtn.disabled = false;
             inputEl.focus();
