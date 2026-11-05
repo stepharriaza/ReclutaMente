@@ -1,0 +1,198 @@
+{% load static %}
+{% load pregunta_tags %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ test.nombre }} | ReclutaMente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-white text-zinc-900 antialiased">
+
+    <div id="bienvenida-prueba" class="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-zinc-950/80 p-4 backdrop-blur-sm">
+        <div class="my-8 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="bg-indigo-950 px-6 py-8 text-white sm:px-10">
+                <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-300">Bienvenido/a</p>
+                <h2 class="mt-3 text-3xl font-extrabold tracking-tight">{{ test.nombre }}</h2>
+                <p class="mt-2 text-sm leading-relaxed text-indigo-100/80">Antes de comenzar, lee las instrucciones de la prueba.</p>
+            </div>
+            <div class="px-6 py-7 sm:px-10">
+                <ul class="space-y-4 text-sm leading-relaxed text-zinc-700">
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">1</span>
+                        <span>Tienes <strong class="text-zinc-900">{{ duracion_minutos|default:10 }} minutos</strong> para completar la prueba.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">2</span>
+                        <span>Lee cada pregunta y elige una sola opción: <strong class="text-zinc-900">a, b, c o d</strong>.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">3</span>
+                        <span>La prueba contiene <strong class="text-zinc-900">{{ preguntas|length }} pregunta{{ preguntas|length|pluralize }}</strong>.</span>
+                    </li>
+                </ul>
+                <div class="mt-8 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-xs text-zinc-500">No cierres ni recargues la página durante la prueba.</p>
+                    <button type="button" id="btn-comenzar" class="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
+                        Comenzar prueba
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="temporizador" class="fixed right-4 top-20 z-50 hidden items-center gap-2 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm font-bold text-indigo-700 shadow-lg">
+        <span id="tiempo-restante">--:--</span>
+    </div>
+
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/70 backdrop-blur-lg">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <a href="{% url 'catalogo' %}" class="text-lg font-bold tracking-wide text-white">
+                    Recluta<span class="text-indigo-400">Mente</span>
+                </a>
+                <a href="#" class="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-white/10">Mi perfil</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="border-t border-gray-200 bg-white py-16">
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Prueba</p>
+                <h1 class="mt-4 text-4xl font-extrabold tracking-tight text-zinc-900 sm:text-5xl">{{ test.nombre }}</h1>
+                <p class="mt-5 max-w-2xl text-lg leading-relaxed text-zinc-600">{{ test.descripcion }}</p>
+            </div>
+        </section>
+
+        <section class="border-t border-gray-200 bg-white py-16">
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                {% if preguntas %}
+                <form method="post" id="test-form">
+                    {% csrf_token %}
+                    <div class="grid gap-6">
+                        {% for item in preguntas %}
+                        <div class="rounded-lg border border-gray-200 bg-white p-6 sm:p-8">
+                            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">
+                                Pregunta {{ item.fila|default:forloop.counter|stringformat:"02d" }}
+                            </p>
+                            <div class="mt-4 space-y-4">
+                                {% for bloque in item.texto_pregunta|bloques_pregunta %}
+                                    {% if bloque.tipo == "imagen" %}
+                                        {% if bloque.externa %}
+                                        <img src="{{ bloque.valor }}" alt="Figura de la pregunta {{ item.fila }}" class="max-h-80 w-auto rounded-md border border-gray-200 bg-zinc-50 object-contain" />
+                                        {% else %}
+                                        <img src="{% static bloque.valor %}" alt="Figura de la pregunta {{ item.fila }}" class="max-h-80 w-auto rounded-md border border-gray-200 bg-zinc-50 object-contain" />
+                                        {% endif %}
+                                    {% else %}
+                                    <p class="whitespace-pre-line text-base leading-relaxed text-zinc-800">{{ bloque.valor }}</p>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="mt-6 flex flex-wrap gap-3">
+                                {% for letra in "abcd" %}
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="respuesta_{{ item.id }}" value="{{ letra }}" required class="peer sr-only" />
+                                    <span class="flex h-12 w-12 items-center justify-center rounded-md border border-gray-300 bg-white text-lg font-bold uppercase text-zinc-700 transition hover:border-indigo-300 peer-checked:border-indigo-600 peer-checked:bg-indigo-600 peer-checked:text-white">
+                                        {{ letra }}
+                                    </span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-10 flex items-center justify-between gap-4">
+                        <a href="{% url 'tests_categoria' test.categoria.id %}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-bold uppercase tracking-widest text-zinc-700 transition hover:bg-zinc-50">Volver</a>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">Finalizar prueba</button>
+                    </div>
+                </form>
+                {% else %}
+                <p class="text-zinc-600">Este test no tiene preguntas registradas.</p>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <script>
+        (function () {
+            const DURACION_MS = {{ duracion_minutos|default:10 }} * 60 * 1000;
+            const CLAVE = "reclutamente_prueba_inicio_{{ test.id }}";
+            const overlay = document.getElementById("bienvenida-prueba");
+            const boton = document.getElementById("btn-comenzar");
+            const form = document.getElementById("test-form");
+            const temporizador = document.getElementById("temporizador");
+            const salida = document.getElementById("tiempo-restante");
+            let intervalo = null;
+            let enviando = false;
+
+            function leerInicio() {
+                try { const v = sessionStorage.getItem(CLAVE); return v ? Number(v) : null; } catch (e) { return null; }
+            }
+            function guardarInicio(valor) {
+                try {
+                    if (valor === null) sessionStorage.removeItem(CLAVE);
+                    else sessionStorage.setItem(CLAVE, String(valor));
+                } catch (e) {}
+            }
+            function formatear(ms) {
+                const total = Math.max(0, Math.ceil(ms / 1000));
+                return String(Math.floor(total / 60)).padStart(2, "0") + ":" + String(total % 60).padStart(2, "0");
+            }
+            function enviarAutomaticamente() {
+                if (enviando) return;
+                enviando = true;
+                guardarInicio(null);
+                if (form) form.submit();
+            }
+            function actualizar() {
+                const inicio = leerInicio();
+                if (!inicio) return;
+                const restante = DURACION_MS - (Date.now() - inicio);
+                salida.textContent = formatear(restante);
+                if (restante <= 0) {
+                    clearInterval(intervalo);
+                    salida.textContent = "00:00";
+                    enviarAutomaticamente();
+                }
+            }
+            function iniciar() {
+                overlay.classList.add("hidden");
+                temporizador.classList.remove("hidden");
+                temporizador.classList.add("flex");
+                actualizar();
+                intervalo = setInterval(actualizar, 250);
+            }
+            boton.addEventListener("click", function () {
+                guardarInicio(Date.now());
+                iniciar();
+            });
+            if (form) form.addEventListener("submit", function () { guardarInicio(null); });
+            const inicioGuardado = leerInicio();
+            if (inicioGuardado) {
+                if (Date.now() - inicioGuardado >= DURACION_MS) {
+                    overlay.classList.add("hidden");
+                    enviarAutomaticamente();
+                } else {
+                    iniciar();
+                }
+            }
+        })();
+    </script>
+</body>
+</html>

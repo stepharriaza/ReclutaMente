@@ -206,6 +206,11 @@ urlpatterns = [
         views.profesional_perfil,
         name='profesional_perfil',
     ),
+    path(
+        'profesional/certificaciones/',
+        views.profesional_certificaciones,
+        name='profesional_certificaciones',
+    ),
     # --- Agente de IA ---
     path('api/agente-ia/', views.api_agente_ia, name='api_agente_ia'),
     path(

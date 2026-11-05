@@ -1,0 +1,237 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis certificaciones | ReclutaMente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-white text-zinc-900 antialiased">
+
+    {# nav #}
+    <nav id="navbar" class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/70 backdrop-blur-lg transition">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'home_profesionales' %}" class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white" title="Logo ReclutaMente">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                                <path d="M12 4a2 2 0 0 1 2 2v.5a3.5 3.5 0 0 1 7 1.5c0 .9-.34 1.66-.9 2.3A4 4 0 0 1 15 14a2 2 0 0 0 2 2 3.5 3.5 0 0 1 3.5 3.5A4.5 4.5 0 0 1 12 21a4.5 4.5 0 0 1-8.5-1.5A3.5 3.5 0 0 1 7 16a2 2 0 0 0 2-2 4 4 0 0 1-5.1-3.7c-.56-.64-.9-1.4-.9-2.3A3.5 3.5 0 0 1 10 6.5V6a2 2 0 0 1 2-2Z"/>
+                            </svg>
+                        </div>
+                        <span class="text-lg font-bold tracking-wide text-white">
+                            Recluta<span class="text-indigo-400">Mente</span>
+                        </span>
+                    </a>
+                    <a href="{% url 'home_profesionales' %}" class="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                        Regresar
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <a href="{% url 'profesional_perfil' %}" class="flex items-center gap-2 rounded-full border border-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-white transition hover:bg-white/10" title="Mi perfil">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                            <circle cx="12" cy="8" r="4"/>
+                            <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/>
+                        </svg>
+                        Mi perfil
+                    </a>
+                    <a href="{% url 'logout' %}" class="text-sm font-semibold uppercase tracking-widest text-zinc-300 transition hover:text-white">
+                        Cerrar sesión
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+
+        {# encabezado #}
+        <section class="relative overflow-hidden bg-indigo-950 text-white">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+                <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+                <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
+            </div>
+
+            <div class="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Mi desempeño</p>
+                <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+                    Mis certificaciones e intentos
+                </h1>
+                <p class="mt-5 max-w-2xl text-lg leading-relaxed text-indigo-200/70">
+                    Consulta el historial de evaluaciones realizadas, revisa tus resultados y descarga las certificaciones obtenidas.
+                </p>
+
+                <dl class="mt-12 grid max-w-3xl grid-cols-2 gap-10 border-t border-white/25 pt-10 sm:grid-cols-4">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Intentos</dt>
+                        <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_intentos }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Completados</dt>
+                        <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_completadas }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">En progreso</dt>
+                        <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_en_progreso }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300/70">Certificaciones</dt>
+                        <dd class="mt-2 text-4xl font-extrabold text-white">{{ total_certificaciones }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        {# certificaciones disponibles #}
+        <section class="border-t border-gray-200 bg-white py-20">
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Certificados obtenidos</p>
+                <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">Certificaciones</h2>
+
+                {% if certificaciones %}
+                    <div class="mt-12 grid gap-6 md:grid-cols-2">
+                        {% for cert in certificaciones %}
+                        <div class="flex flex-col rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">{{ forloop.counter|stringformat:"02d" }}</p>
+                                <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50/60 text-emerald-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                        <polyline points="14 2 14 8 20 8"/>
+                                        <path d="M9 15l2 2 4-4"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 class="mt-6 text-xl font-bold text-zinc-900">{{ cert.intento.test.nombre }}</h3>
+                            <p class="mt-2 text-sm leading-relaxed text-zinc-600">
+                                {{ cert.intento.test.categoria.nombre|default:"Sin categoría" }}
+                            </p>
+                            <div class="mt-4 space-y-1 text-sm text-zinc-500">
+                                <p><span class="font-semibold text-zinc-700">Código:</span> {{ cert.codigo_verificacion }}</p>
+                                <p><span class="font-semibold text-zinc-700">Emitido:</span> {{ cert.fecha_emision|date:"d/m/Y" }}</p>
+                                <p><span class="font-semibold text-zinc-700">Puntaje:</span> {{ cert.intento.puntaje_total|default:"N/A" }}</p>
+                            </div>
+                            <div class="mt-8 flex flex-wrap items-center gap-3">
+                                {% if cert.pdf %}
+                                <a href="{{ cert.pdf }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                                    Descargar PDF
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                </a>
+                                {% else %}
+                                <span class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-zinc-50 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-zinc-400">
+                                    PDF no disponible
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="mt-12 rounded-lg border border-gray-200 bg-white p-12 text-center">
+                        <p class="text-zinc-600">Aún no tienes certificaciones disponibles.</p>
+                        <a href="{% url 'catalogo' %}" class="mt-6 inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                            Ir al catálogo
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        {# historial de intentos #}
+        <section class="border-t border-gray-200 bg-white pb-20 pt-16">
+            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Evaluaciones</p>
+                <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">Intentos realizados</h2>
+
+                {% if intentos %}
+                    <div class="mt-12 overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-zinc-50/80">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Test</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Categoría</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Fecha</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Puntaje</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Duración</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Estado</th>
+                                    <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Certificado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                                {% for intento in intentos %}
+                                <tr class="transition hover:bg-indigo-50/30">
+                                    <td class="whitespace-nowrap px-6 py-5 text-sm font-semibold text-zinc-900">{{ intento.test.nombre }}</td>
+                                    <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">{{ intento.test.categoria.nombre|default:"Sin categoría" }}</td>
+                                    <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">{{ intento.fecha|date:"d/m/Y" }}</td>
+                                    <td class="whitespace-nowrap px-6 py-5 text-sm font-bold text-indigo-600">
+                                        {{ intento.puntaje_total|default:"—" }}
+                                    </td>
+                                    <td class="whitespace-nowrap px-6 py-5 text-sm text-zinc-600">
+                                        {% if intento.duracion %}{{ intento.duracion }} min{% else %}—{% endif %}
+                                    </td>
+                                    <td class="whitespace-nowrap px-6 py-5 text-sm">
+                                        {% if intento.estado == EstadoIntento.COMPLETADO %}
+                                            <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                                                Completado
+                                            </span>
+                                        {% elif intento.estado == EstadoIntento.EN_PROGRESO %}
+                                            <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-amber-700">
+                                                En progreso
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+                                                Iniciado
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="whitespace-nowrap px-6 py-5 text-right text-sm">
+                                        {% if intento.certificado %}
+                                            <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-700">
+                                                Sí
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center rounded-full border border-gray-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                                                No
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="mt-12 rounded-lg border border-gray-200 bg-white p-12 text-center">
+                        <p class="text-zinc-600">Aún no has realizado ningún intento.</p>
+                        <a href="{% url 'catalogo' %}" class="mt-6 inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
+                            Explorar catálogo
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>
