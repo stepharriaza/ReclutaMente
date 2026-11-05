@@ -340,6 +340,52 @@ def _nivel_puntaje(puntaje):
     }
 
 
+def _puntaje_numerico(puntaje):
+    try:
+        return float(puntaje)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clave_orden_resultado(item):
+    valor = _puntaje_numerico(item['resultado'].get('puntaje'))
+    return (
+        valor is None,
+        -(valor or 0),
+        item['persona'].nombre.lower(),
+    )
+
+
+def _decorar_resultados_ia(resultados_ia):
+    """Agrega los datos de gráficas y ordena los resultados para el informe."""
+    for item in resultados_ia:
+        item['nivel'] = _nivel_puntaje(item['resultado'].get('puntaje'))
+        item['barras_pruebas'] = _barras_pruebas(item['resultado'])
+        item['barras_dimensiones'] = _barras_dimensiones(item['intentos'])
+        for detalle in item['pruebas_detalle']:
+            intento = detalle.get('intento')
+            detalle['barras_dimensiones'] = (
+                _barras_dimensiones([intento]) if intento else []
+            )
+
+    resultados_ia.sort(key=_clave_orden_resultado)
+    return resultados_ia
+
+
+def _resultado_desde_analisis(analisis):
+    """Reconstruye el resultado visible a partir de un análisis guardado."""
+    perfil = analisis.perfil if isinstance(analisis.perfil, dict) else {}
+    return {
+        'puntaje': perfil.get('puntaje'),
+        'recomendacion': perfil.get('recomendacion', ''),
+        'fortalezas': perfil.get('fortalezas') or [],
+        'brechas': perfil.get('brechas') or [],
+        'informe': analisis.informe_texto or '',
+        'pruebas': perfil.get('pruebas') or [],
+        'modelo': analisis.modelo_usado or '',
+    }
+
+
 def _guardar_analisis_ia(
     intentos,
     criterios,
@@ -1572,23 +1618,7 @@ def empresa_evaluar_participantes_ia(request, pk):
                     }
                 )
 
-            for item in resultados_ia:
-                item['nivel'] = _nivel_puntaje(item['resultado'].get('puntaje'))
-                item['barras_pruebas'] = _barras_pruebas(item['resultado'])
-                item['barras_dimensiones'] = _barras_dimensiones(item['intentos'])
-                for detalle in item['pruebas_detalle']:
-                    intento = detalle.get('intento')
-                    detalle['barras_dimensiones'] = (
-                        _barras_dimensiones([intento]) if intento else []
-                    )
-
-            resultados_ia.sort(
-                key=lambda item: (
-                    item['resultado'].get('puntaje') is None,
-                    -(item['resultado'].get('puntaje') or 0),
-                    item['persona'].nombre.lower(),
-                )
-            )
+            _decorar_resultados_ia(resultados_ia)
             if resultados_ia:
                 messages.success(
                     request,
@@ -1619,6 +1649,37 @@ def empresa_evaluar_participantes_ia(request, pk):
             }
         )
 
+    if not resultados_ia:
+        for candidato in candidatos:
+            analisis = candidato['analisis']
+            if not analisis:
+                continue
+
+            intentos = candidato['intentos']
+            intentos_por_id = {intento.id: intento for intento in intentos}
+            resultado = _resultado_desde_analisis(analisis)
+            pruebas_detalle = [
+                {
+                    'resultado': prueba,
+                    'intento': intentos_por_id.get(prueba.get('intento_id')),
+                }
+                for prueba in resultado.get('pruebas') or []
+            ]
+            resultados_ia.append(
+                {
+                    'persona': candidato['persona'],
+                    'intentos': intentos,
+                    'resultado': resultado,
+                    'analisis': analisis,
+                    'pruebas_detalle': pruebas_detalle,
+                }
+            )
+        _decorar_resultados_ia(resultados_ia)
+
+    candidatos_pendientes = [
+        candidato for candidato in candidatos if not candidato['analisis']
+    ]
+
     context = {
         'plaza': plaza,
         'empresa': empresa,
@@ -1633,6 +1694,7 @@ def empresa_evaluar_participantes_ia(request, pk):
         'competencias_seleccionadas': competencias,
         'otros_criterios': otros_criterios,
         'candidatos': candidatos,
+        'candidatos_pendientes': candidatos_pendientes,
         'total_candidatos': len(candidatos),
         'resultados_ia': resultados_ia,
         'errores': errores,
