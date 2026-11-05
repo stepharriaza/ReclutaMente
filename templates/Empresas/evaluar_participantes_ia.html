@@ -124,7 +124,7 @@
                 <p class="text-sm text-gray-600">
                     Participantes con pruebas completadas: <span class="font-semibold text-gray-900">{{ total_candidatos }}</span>
                 </p>
-                <button type="submit" {% if not total_candidatos or not criterios %}disabled{% endif %} class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                <button type="submit" id="eval-submit-btn" data-total-candidatos="{{ total_candidatos }}" {% if not total_candidatos or not criterios %}disabled{% endif %} class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
                     Evaluar participantes
                 </button>
             </form>
@@ -559,6 +559,10 @@
     const sesgoDetalleEl = document.getElementById('sesgo_detalle');
     const criteriosPreviewEl = document.getElementById('criterios-preview');
     const sesgoPreviewEl = document.getElementById('sesgo-preview');
+    const submitBtn = document.getElementById('eval-submit-btn');
+    const totalCandidatos = submitBtn
+        ? parseInt(submitBtn.getAttribute('data-total-candidatos') || '0', 10)
+        : 0;
 
     if (!historyEl || !inputEl || !sendBtn) return;
 
@@ -605,6 +609,14 @@
         const indicador = document.getElementById('eval-assistant-typing');
         if (indicador) indicador.remove();
     }
+
+    function actualizarBotonEvaluar() {
+        if (!submitBtn) return;
+        const tieneCriterios = criteriosEl && criteriosEl.value.trim().length > 0;
+        submitBtn.disabled = !tieneCriterios || totalCandidatos === 0;
+    }
+
+    actualizarBotonEvaluar();
 
     async function enviarAsistente(texto) {
         texto = (texto || '').trim();
@@ -660,6 +672,8 @@
                 const detalle = sesgoDetalleEl ? sesgoDetalleEl.value.trim() : '';
                 sesgoPreviewEl.textContent = detalle ? etiqueta + ' · ' + detalle : etiqueta;
             }
+
+            actualizarBotonEvaluar();
 
             statusEl.textContent = data.listo
                 ? 'Criterio actualizado. Revisa el resumen y presiona "Evaluar participantes".'

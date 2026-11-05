@@ -200,7 +200,14 @@ def _seleccion_ia_guardada(request, plaza):
 
 
 def _guardar_seleccion_ia(
-    request, plaza, perfil, competencias, otros, sesgo, sesgo_detalle
+    request,
+    plaza,
+    perfil,
+    competencias,
+    otros,
+    sesgo,
+    sesgo_detalle,
+    criterios_texto='',
 ):
     request.session[_clave_seleccion_ia(plaza)] = {
         'perfil_objetivo': perfil,
@@ -208,6 +215,7 @@ def _guardar_seleccion_ia(
         'otros_criterios': otros,
         'sesgo': sesgo,
         'sesgo_detalle': sesgo_detalle,
+        'criterios_texto': criterios_texto,
     }
 
 
@@ -1526,12 +1534,14 @@ def empresa_evaluar_participantes_ia(request, pk):
             if clave in COMPETENCIAS_EVALUACION
         ]
         otros_criterios = seleccion_guardada.get('otros_criterios', '')
-        criterios = _componer_criterios(
-            perfil_objetivo,
-            competencias,
-            otros_criterios,
-            (plaza.requisitos or ''),
-        )
+        criterios = seleccion_guardada.get('criterios_texto', '')
+        if not criterios:
+            criterios = _componer_criterios(
+                perfil_objetivo,
+                competencias,
+                otros_criterios,
+                (plaza.requisitos or ''),
+            )
         sesgo = seleccion_guardada.get('sesgo', 'equilibrado')
         sesgo_detalle = seleccion_guardada.get('sesgo_detalle', '')
 
@@ -1564,6 +1574,7 @@ def empresa_evaluar_participantes_ia(request, pk):
                 otros_criterios,
                 sesgo,
                 sesgo_detalle,
+                criterios,
             )
             contexto_plaza = _contexto_plaza_para_ia(plaza)
             for intentos in grupos:
@@ -1747,6 +1758,36 @@ def api_asistente_criterios_evaluacion(request, pk):
         )
     except Exception as exc:
         return JsonResponse({'error': str(exc)}, status=500)
+
+    seleccion = _seleccion_ia_guardada(request, plaza)
+    criterios_guardados = (
+        str(resultado.get('criterios') or '').strip()
+        or seleccion.get('criterios_texto', '')
+        or criterios_actuales
+    )
+    sesgo_guardado = (
+        str(resultado.get('sesgo') or '').strip()
+        or seleccion.get('sesgo', '')
+        or sesgo_actual
+        or 'equilibrado'
+    )
+    if sesgo_guardado not in SESGOS_CALIFICACION:
+        sesgo_guardado = 'equilibrado'
+    sesgo_detalle_guardado = str(
+        resultado.get('sesgo_detalle')
+        or seleccion.get('sesgo_detalle', '')
+    ).strip()[:500]
+
+    _guardar_seleccion_ia(
+        request,
+        plaza,
+        seleccion.get('perfil_objetivo', ''),
+        seleccion.get('competencias', []),
+        seleccion.get('otros_criterios', ''),
+        sesgo_guardado,
+        sesgo_detalle_guardado,
+        criterios_guardados[:2000],
+    )
 
     return JsonResponse(resultado)
 
