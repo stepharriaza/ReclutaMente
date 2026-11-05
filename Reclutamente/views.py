@@ -4,6 +4,7 @@ from django.http import request
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import render, redirect
 from core.models import Plaza, Empresa, Ticket, Persona, Usuario, PruebaGeneradaEmpresa
+from core.correo import validar_correo_configurado
 from core.models import InvitacionEvaluacion, Respuesta, Postulacion, Convocatoria, EstadoConvocatoria
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -330,6 +331,7 @@ def _enviar_invitacion_evaluacion(request, invitacion):
     email.attach_alternative(mensaje_html, 'text/html')
     qr_buffer = _generar_qr_png(enlace)
     email.attach(f'qr_{plaza.nombre[:30].replace(" ", "_")}.png', qr_buffer.getvalue(), 'image/png')
+    validar_correo_configurado()
     email.send(fail_silently=False)
     return enlace
 

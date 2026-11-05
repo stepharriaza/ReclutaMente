@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
-import os
+import logging
 import os
 from pathlib import Path
 
@@ -172,9 +172,19 @@ EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_BACKEND = (
-    os.environ.get('EMAIL_BACKEND')
-    or 'django.core.mail.backends.smtp.EmailBackend'
-    if EMAIL_HOST
-    else 'django.core.mail.backends.console.EmailBackend'
-)
+# Solo para desarrollo sin SMTP: permite que los correos se impriman en consola.
+# En producción debe quedar desactivado o los correos nunca se enviarán.
+EMAIL_PERMITIR_CONSOLA = os.environ.get(
+    'EMAIL_PERMITIR_CONSOLA', ''
+).lower() in ('1', 'true', 'yes')
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', '').strip()
+if not EMAIL_BACKEND:
+    if EMAIL_HOST:
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+        if not EMAIL_PERMITIR_CONSOLA:
+            logging.getLogger(__name__).warning(
+                'EMAIL_HOST no está configurado: los correos se escribirán en '
+                'la consola del servidor y NO se enviarán a los destinatarios.'
+            )

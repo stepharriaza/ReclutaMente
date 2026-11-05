@@ -20,6 +20,7 @@ from core.auth_utils import (
     validar_contrasena,
     validar_token_recuperacion,
 )
+from core.correo import validar_correo_configurado
 from core.models import Usuario
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ def _enviar_correo_recuperacion(request, usuario):
         [usuario.email],
     )
     correo.attach_alternative(html, 'text/html')
+    validar_correo_configurado()
     correo.send(fail_silently=False)
 
 
