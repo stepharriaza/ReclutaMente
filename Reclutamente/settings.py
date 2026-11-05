@@ -29,6 +29,18 @@ GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash')
 # Duración máxima de cada prueba en minutos.
 DURACION_PRUEBA_MINUTOS = int(os.environ.get('DURACION_PRUEBA_MINUTOS', '10'))
 
+# Microsoft Fabric / Power BI
+# URL de inserción del reporte publicado (Publicar en la web o embed seguro).
+FABRIC_POWERBI_EMBED_URL = os.environ.get(
+    'FABRIC_POWERBI_EMBED_URL', ''
+).strip()
+# URL del workspace de Fabric para el acceso directo.
+FABRIC_WORKSPACE_URL = os.environ.get('FABRIC_WORKSPACE_URL', '').strip()
+# Endpoint de ingesta (Data Factory, Eventstream, Power Automate o Azure Function).
+FABRIC_INGEST_URL = os.environ.get('FABRIC_INGEST_URL', '').strip()
+# Token opcional enviado como Bearer al endpoint de ingesta.
+FABRIC_INGEST_TOKEN = os.environ.get('FABRIC_INGEST_TOKEN', '').strip()
+
 
 
 # Quick-start development settings - unsuitable for production

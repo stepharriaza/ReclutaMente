@@ -97,6 +97,14 @@ urlpatterns = [
         'empresa/vacantes/<int:pk>/asistente-criterios/',
         views.api_asistente_criterios_evaluacion,
         name='api_asistente_criterios_evaluacion'),
+    path(
+        'empresa/vacantes/<int:pk>/fabric/exportar/',
+        views.empresa_exportar_evaluacion_fabric,
+        name='empresa_exportar_evaluacion_fabric'),
+    path(
+        'empresa/vacantes/<int:pk>/fabric/enviar/',
+        views.empresa_enviar_evaluacion_fabric,
+        name='empresa_enviar_evaluacion_fabric'),
     # URL Super admin
     path(
         'superadmin/perfil/', 

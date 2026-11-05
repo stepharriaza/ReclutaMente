@@ -525,6 +525,96 @@
         </div>
         {% endif %}
 
+        <div id="fabric" class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950 px-6 py-5 text-white">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div class="flex items-start gap-3">
+                        <div class="h-10 w-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-lg">▦</div>
+                        <div>
+                            <h2 class="text-lg font-bold">Microsoft Fabric</h2>
+                            <p class="text-sm text-cyan-100 mt-1">Tablero analítico y exportación de resultados para OneLake, Data Factory y Power BI.</p>
+                        </div>
+                    </div>
+                    {% if fabric_embed_url %}
+                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">Tablero conectado</span>
+                    {% else %}
+                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/30">Pendiente de configurar</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="p-6 space-y-5">
+                {% if fabric_embed_url %}
+                <div class="rounded-2xl border border-gray-200 overflow-hidden bg-gray-50">
+                    <iframe
+                        src="{{ fabric_embed_url }}"
+                        title="Tablero de Microsoft Fabric"
+                        class="w-full h-[620px]"
+                        frameborder="0"
+                        allowfullscreen="true"></iframe>
+                </div>
+                {% else %}
+                <div class="rounded-2xl border border-dashed border-cyan-300 bg-cyan-50/60 p-5">
+                    <h3 class="text-sm font-bold text-cyan-900">Aún no hay un tablero de Fabric conectado</h3>
+                    <p class="mt-1 text-sm text-cyan-800">Publica tu reporte de Power BI en un workspace de Microsoft Fabric y configura la URL de inserción para verlo aquí.</p>
+                    <ol class="mt-3 space-y-1.5 text-sm text-cyan-900 list-decimal list-inside">
+                        <li>Publica el archivo <span class="font-semibold">.pbix</span> en un workspace de Microsoft Fabric / Power BI.</li>
+                        <li>Copia la URL de inserción del reporte (Publicar en la web o inserción segura).</li>
+                        <li>Agrega <code class="bg-white/70 px-1.5 py-0.5 rounded text-xs">FABRIC_POWERBI_EMBED_URL</code> en el archivo <code class="bg-white/70 px-1.5 py-0.5 rounded text-xs">.env</code> del servidor.</li>
+                        <li>Reinicia la aplicación para cargar la nueva variable.</li>
+                    </ol>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="rounded-2xl border border-gray-200 p-4">
+                        <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">1. Exportar datos</p>
+                        <p class="mt-1 text-sm text-gray-600">Descarga los resultados de esta vacante en CSV o JSON para cargarlos en OneLake o Data Factory.</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <a href="{% url 'empresa_exportar_evaluacion_fabric' plaza.id %}?formato=csv" class="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white font-semibold px-4 py-2 rounded-lg text-xs transition">
+                                Descargar CSV
+                            </a>
+                            <a href="{% url 'empresa_exportar_evaluacion_fabric' plaza.id %}?formato=json" class="inline-flex items-center justify-center bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-lg text-xs transition">
+                                Descargar JSON
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-gray-200 p-4">
+                        <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">2. Enviar a Fabric</p>
+                        {% if fabric_ingest_configurado %}
+                        <p class="mt-1 text-sm text-gray-600">Envía el mismo conjunto de datos al endpoint de ingesta configurado.</p>
+                        <button type="button" id="fabric-send-btn" data-url="{% url 'empresa_enviar_evaluacion_fabric' plaza.id %}" class="mt-3 inline-flex items-center justify-center bg-cyan-700 hover:bg-cyan-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg text-xs transition">
+                            Enviar a Fabric
+                        </button>
+                        <p id="fabric-send-status" class="mt-2 text-xs text-gray-500"></p>
+                        {% else %}
+                        <p class="mt-1 text-sm text-gray-600">Configura <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">FABRIC_INGEST_URL</code> para habilitar el envío automático a Fabric.</p>
+                        <span class="mt-3 inline-flex items-center justify-center bg-gray-100 text-gray-400 font-semibold px-4 py-2 rounded-lg text-xs cursor-not-allowed">Enviar a Fabric</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="rounded-2xl border border-gray-200 p-4">
+                        <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">3. Workspace</p>
+                        {% if fabric_workspace_url %}
+                        <p class="mt-1 text-sm text-gray-600">Abre el workspace de Microsoft Fabric para administrar el tablero y los datos.</p>
+                        <a href="{{ fabric_workspace_url }}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center justify-center bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-semibold px-4 py-2 rounded-lg text-xs transition">
+                            Abrir Fabric
+                        </a>
+                        {% else %}
+                        <p class="mt-1 text-sm text-gray-600">Configura <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">FABRIC_WORKSPACE_URL</code> para agregar un acceso directo al workspace.</p>
+                        <span class="mt-3 inline-flex items-center justify-center bg-gray-100 text-gray-400 font-semibold px-4 py-2 rounded-lg text-xs cursor-not-allowed">Abrir Fabric</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="rounded-xl bg-gray-50 border border-gray-200 p-4 text-xs text-gray-500">
+                    <p><span class="font-semibold text-gray-700">Variables de entorno:</span> <code>FABRIC_POWERBI_EMBED_URL</code>, <code>FABRIC_WORKSPACE_URL</code>, <code>FABRIC_INGEST_URL</code> y <code>FABRIC_INGEST_TOKEN</code>.</p>
+                    <p class="mt-1">El CSV incluye una fila por intento de prueba, con puntaje IA, recomendación, fortalezas, brechas, informe y dimensiones en JSON.</p>
+                </div>
+            </div>
+        </div>
+
         {% if resultados_ia and candidatos_pendientes %}
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
             <h2 class="text-lg font-bold text-gray-900">Participantes sin evaluación</h2>
@@ -705,6 +795,45 @@
         boton.addEventListener('click', function () {
             enviarAsistente(boton.getAttribute('data-sugerencia'));
         });
+    });
+})();
+</script>
+
+<script>
+(function () {
+    const boton = document.getElementById('fabric-send-btn');
+    if (!boton) return;
+
+    const estado = document.getElementById('fabric-send-status');
+
+    boton.addEventListener('click', async function () {
+        const url = boton.getAttribute('data-url');
+        if (!url) return;
+
+        boton.disabled = true;
+        if (estado) estado.textContent = 'Enviando resultados a Microsoft Fabric...';
+
+        try {
+            const respuesta = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN
+                },
+                body: '{}'
+            });
+            const datos = await respuesta.json();
+            if (!respuesta.ok) {
+                throw new Error(datos.error || 'No se pudo enviar a Fabric.');
+            }
+            if (estado) {
+                estado.textContent = datos.mensaje || 'Resultados enviados a Microsoft Fabric.';
+            }
+        } catch (error) {
+            if (estado) estado.textContent = 'Error: ' + error.message;
+        } finally {
+            boton.disabled = false;
+        }
     });
 })();
 </script>

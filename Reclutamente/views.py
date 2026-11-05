@@ -30,12 +30,14 @@ from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from google import genai
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from urllib.parse import quote
+import csv
 import json
 import io
 import re
 import qrcode
+import requests
 from core.decorators import (
     solo_profesional,
     solo_empresa,
@@ -392,6 +394,167 @@ def _resultado_desde_analisis(analisis):
         'pruebas': perfil.get('pruebas') or [],
         'modelo': analisis.modelo_usado or '',
     }
+
+
+FABRIC_CAMPOS_CSV = [
+    'generado_en',
+    'empresa_id',
+    'empresa_nombre',
+    'plaza_id',
+    'plaza_nombre',
+    'persona_id',
+    'persona_nombre',
+    'persona_email',
+    'puntaje_ia',
+    'recomendacion_ia',
+    'fortalezas_ia',
+    'brechas_ia',
+    'informe_ia',
+    'criterios',
+    'sesgo',
+    'sesgo_detalle',
+    'intento_id',
+    'test_id',
+    'test_nombre',
+    'fecha_intento',
+    'puntaje_total',
+    'puntaje_dimensiones_json',
+    'prueba_puntaje_ia',
+    'prueba_fortalezas_ia',
+    'prueba_brechas_ia',
+    'prueba_informe_ia',
+]
+
+
+def _datos_exportacion_fabric(plaza):
+    """Arma el conjunto de resultados de una vacante para Microsoft Fabric."""
+    grupos = _intentos_completados_por_persona(plaza)
+    grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+    candidatos = []
+    for intentos in grupos:
+        representante = intentos[0]
+        analisis = AnalisisIA.objects.filter(intento=representante).first()
+        perfil = (
+            analisis.perfil
+            if analisis and isinstance(analisis.perfil, dict)
+            else {}
+        )
+
+        analisis_por_intento = {}
+        for prueba in perfil.get('pruebas') or []:
+            try:
+                analisis_por_intento[int(prueba.get('intento_id'))] = prueba
+            except (TypeError, ValueError):
+                continue
+
+        intentos_datos = []
+        for intento in intentos:
+            fecha = intento.fecha
+            if fecha and timezone.is_aware(fecha):
+                fecha = timezone.localtime(fecha)
+            intentos_datos.append(
+                {
+                    'intento_id': intento.id,
+                    'test_id': intento.test_id,
+                    'test': intento.test.nombre if intento.test else '',
+                    'fecha': fecha.isoformat() if fecha else '',
+                    'puntaje_total': (
+                        float(intento.puntaje_total)
+                        if intento.puntaje_total is not None
+                        else None
+                    ),
+                    'puntaje_dimensiones': _dimensiones_intento(intento),
+                    'analisis_ia': analisis_por_intento.get(intento.id),
+                }
+            )
+
+        candidatos.append(
+            {
+                'persona': {
+                    'id': representante.persona_id,
+                    'nombre': representante.persona.nombre,
+                    'email': representante.persona.email,
+                },
+                'puntaje_ia': perfil.get('puntaje'),
+                'recomendacion': perfil.get('recomendacion', ''),
+                'fortalezas': perfil.get('fortalezas') or [],
+                'brechas': perfil.get('brechas') or [],
+                'informe': analisis.informe_texto if analisis else '',
+                'criterios': perfil.get('criterios', ''),
+                'sesgo': perfil.get('sesgo', ''),
+                'sesgo_detalle': perfil.get('sesgo_detalle', ''),
+                'intentos': intentos_datos,
+            }
+        )
+
+    return {
+        'generado_en': timezone.now().isoformat(),
+        'empresa': {
+            'id': plaza.empresa_id,
+            'nombre': plaza.empresa.nombre if plaza.empresa else '',
+        },
+        'plaza': {
+            'id': plaza.id,
+            'nombre': plaza.nombre,
+            'descripcion': plaza.descripcion or '',
+        },
+        'total_candidatos': len(candidatos),
+        'candidatos': candidatos,
+    }
+
+
+def _filas_csv_fabric(datos):
+    """Aplana el conjunto de datos en filas para CSV (una por intento)."""
+    filas = []
+    for candidato in datos.get('candidatos') or []:
+        base = {
+            'generado_en': datos.get('generado_en', ''),
+            'empresa_id': (datos.get('empresa') or {}).get('id', ''),
+            'empresa_nombre': (datos.get('empresa') or {}).get('nombre', ''),
+            'plaza_id': (datos.get('plaza') or {}).get('id', ''),
+            'plaza_nombre': (datos.get('plaza') or {}).get('nombre', ''),
+            'persona_id': (candidato.get('persona') or {}).get('id', ''),
+            'persona_nombre': (candidato.get('persona') or {}).get('nombre', ''),
+            'persona_email': (candidato.get('persona') or {}).get('email', ''),
+            'puntaje_ia': candidato.get('puntaje_ia', ''),
+            'recomendacion_ia': candidato.get('recomendacion', ''),
+            'fortalezas_ia': ' | '.join(candidato.get('fortalezas') or []),
+            'brechas_ia': ' | '.join(candidato.get('brechas') or []),
+            'informe_ia': candidato.get('informe', ''),
+            'criterios': candidato.get('criterios', ''),
+            'sesgo': candidato.get('sesgo', ''),
+            'sesgo_detalle': candidato.get('sesgo_detalle', ''),
+        }
+
+        intentos = candidato.get('intentos') or [{}]
+        for intento in intentos:
+            analisis = intento.get('analisis_ia') or {}
+            fila = dict(base)
+            fila.update(
+                {
+                    'intento_id': intento.get('intento_id', ''),
+                    'test_id': intento.get('test_id', ''),
+                    'test_nombre': intento.get('test', ''),
+                    'fecha_intento': intento.get('fecha', ''),
+                    'puntaje_total': intento.get('puntaje_total', ''),
+                    'puntaje_dimensiones_json': json.dumps(
+                        intento.get('puntaje_dimensiones') or {},
+                        ensure_ascii=False,
+                    ),
+                    'prueba_puntaje_ia': analisis.get('puntaje', ''),
+                    'prueba_fortalezas_ia': ' | '.join(
+                        analisis.get('fortalezas') or []
+                    ),
+                    'prueba_brechas_ia': ' | '.join(
+                        analisis.get('brechas') or []
+                    ),
+                    'prueba_informe_ia': analisis.get('informe', ''),
+                }
+            )
+            filas.append(fila)
+
+    return filas
 
 
 def _guardar_analisis_ia(
@@ -1709,6 +1872,15 @@ def empresa_evaluar_participantes_ia(request, pk):
         'total_candidatos': len(candidatos),
         'resultados_ia': resultados_ia,
         'errores': errores,
+        'fabric_embed_url': getattr(
+            settings, 'FABRIC_POWERBI_EMBED_URL', ''
+        ),
+        'fabric_workspace_url': getattr(
+            settings, 'FABRIC_WORKSPACE_URL', ''
+        ),
+        'fabric_ingest_configurado': bool(
+            getattr(settings, 'FABRIC_INGEST_URL', '')
+        ),
     }
     return render(request, 'Empresas/evaluar_participantes_ia.html', context)
 
@@ -1790,6 +1962,110 @@ def api_asistente_criterios_evaluacion(request, pk):
     )
 
     return JsonResponse(resultado)
+
+
+@login_required(login_url='login')
+def empresa_exportar_evaluacion_fabric(request, pk):
+    """Descarga los resultados de la vacante en CSV o JSON para Fabric."""
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    if not empresa:
+        messages.error(
+            request,
+            'No se encontró una empresa asociada a tu cuenta.',
+        )
+        return redirect('empresa_dashboard')
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+    datos = _datos_exportacion_fabric(plaza)
+
+    formato = (request.GET.get('formato') or 'csv').strip().lower()
+    marca = timezone.now().strftime('%Y%m%d_%H%M')
+    nombre_base = f'evaluacion_ia_plaza_{plaza.id}_{marca}'
+
+    if formato == 'json':
+        response = JsonResponse(
+            datos,
+            json_dumps_params={'ensure_ascii': False, 'indent': 2},
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{nombre_base}.json"'
+        )
+        return response
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="{nombre_base}.csv"'
+    )
+    response.write('\ufeff')
+    writer = csv.DictWriter(
+        response,
+        fieldnames=FABRIC_CAMPOS_CSV,
+        extrasaction='ignore',
+    )
+    writer.writeheader()
+    for fila in _filas_csv_fabric(datos):
+        writer.writerow(fila)
+    return response
+
+
+@login_required(login_url='login')
+def empresa_enviar_evaluacion_fabric(request, pk):
+    """Envía el JSON de resultados al endpoint de ingesta de Fabric."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    if not empresa:
+        return JsonResponse(
+            {'error': 'No se encontró una empresa asociada a tu cuenta.'},
+            status=403,
+        )
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+
+    url_ingesta = getattr(settings, 'FABRIC_INGEST_URL', '')
+    if not url_ingesta:
+        return JsonResponse(
+            {
+                'error': (
+                    'Falta configurar FABRIC_INGEST_URL en el servidor '
+                    'para enviar datos a Microsoft Fabric.'
+                )
+            },
+            status=400,
+        )
+
+    datos = _datos_exportacion_fabric(plaza)
+    headers = {'Content-Type': 'application/json'}
+    token = getattr(settings, 'FABRIC_INGEST_TOKEN', '')
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+
+    try:
+        respuesta = requests.post(
+            url_ingesta,
+            json=datos,
+            headers=headers,
+            timeout=30,
+        )
+        respuesta.raise_for_status()
+    except Exception as exc:
+        return JsonResponse(
+            {'error': f'No se pudo enviar a Fabric: {exc}'},
+            status=502,
+        )
+
+    return JsonResponse(
+        {
+            'ok': True,
+            'mensaje': (
+                f'Se enviaron {datos.get("total_candidatos", 0)} '
+                'candidato(s) a Microsoft Fabric.'
+            ),
+        }
+    )
 
 
 def evaluacion_invitacion(request, token):
