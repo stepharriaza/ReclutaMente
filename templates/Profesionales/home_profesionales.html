@@ -158,5 +158,57 @@
 
     </main>
 
+    {% if messages %}
+    <style>
+        @keyframes toastEntrada {
+            from { opacity: 0; transform: translateY(14px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .toast-mensaje {
+            animation: toastEntrada 0.25s ease-out both;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+    </style>
+    <div id="toast-mensajes" class="pointer-events-none fixed inset-x-4 bottom-6 z-[70] flex flex-col items-center gap-3 sm:inset-x-auto sm:right-6 sm:items-end">
+        {% for message in messages %}
+        <div class="toast-mensaje pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border px-5 py-4 shadow-2xl
+            {% if 'success' in message.tags %}border-emerald-200 bg-emerald-50 text-emerald-900
+            {% elif 'error' in message.tags %}border-red-200 bg-red-50 text-red-900
+            {% elif 'warning' in message.tags %}border-amber-200 bg-amber-50 text-amber-900
+            {% else %}border-indigo-200 bg-indigo-50 text-indigo-900{% endif %}">
+            <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/70">
+                {% if 'success' in message.tags %}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M20 6 9 17l-5-5"/></svg>
+                {% elif 'error' in message.tags or 'warning' in message.tags %}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+                {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+                {% endif %}
+            </span>
+            <p class="flex-1 text-sm font-semibold leading-relaxed">{{ message }}</p>
+            <button type="button" data-cerrar-toast aria-label="Cerrar mensaje"
+                class="rounded-md p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        document.querySelectorAll(".toast-mensaje").forEach(function (toast) {
+            function cerrar() {
+                toast.style.opacity = "0";
+                toast.style.transform = "translateY(10px)";
+                setTimeout(function () { toast.remove(); }, 260);
+            }
+
+            const boton = toast.querySelector("[data-cerrar-toast]");
+            if (boton) {
+                boton.addEventListener("click", cerrar);
+            }
+            setTimeout(cerrar, 7000);
+        });
+    </script>
+    {% endif %}
+
 </body>
 </html>

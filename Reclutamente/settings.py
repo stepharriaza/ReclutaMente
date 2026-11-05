@@ -23,6 +23,11 @@ load_dotenv(BASE_DIR / '.env')
 
 
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+# Modelo principal de Gemini. Se puede cambiar sin tocar el código con GEMINI_MODEL.
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash')
+
+# Duración máxima de cada prueba en minutos.
+DURACION_PRUEBA_MINUTOS = int(os.environ.get('DURACION_PRUEBA_MINUTOS', '10'))
 
 
 

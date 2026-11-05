@@ -1118,15 +1118,21 @@ def test(request, test_id):
                     dimension=pregunta.dimension or '',
                 )
 
-        messages.success(request, '¡Prueba finalizada! Tus resultados fueron guardados.')
+        messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
         return redirect('home_profesionales')
 
     primera = preguntas.first()
     es_razonamiento = primera is not None and primera.texto_pregunta.strip().lower().endswith(('.png', '.jpg', '.jpeg'))
+    duracion_minutos = getattr(settings, 'DURACION_PRUEBA_MINUTOS', 10)
+    contexto = {
+        "test": test_obj,
+        "preguntas": preguntas,
+        "duracion_minutos": duracion_minutos,
+    }
     if es_razonamiento:
-        return render(request, "test_razonamiento.html", {"test": test_obj, "preguntas": preguntas})
+        return render(request, "test_razonamiento.html", contexto)
 
-    return render(request, "test.html", {"test": test_obj, "preguntas": preguntas})
+    return render(request, "test.html", contexto)
 
 def iniciar_intento(request, test_id):
     if request.method != 'POST':
@@ -1189,12 +1195,17 @@ def resolver_test(request, intento_id):
         intento.estado = EstadoIntento.COMPLETADO
         intento.save()
 
-        messages.success(request, 'Test completado. Tus respuestas fueron guardadas.')
+        messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
         return redirect('tests_categoria', categoria_id=test_obj.categoria_id)
 
     primera = preguntas.first()
     es_razonamiento = primera is not None and primera.texto_pregunta.strip().lower().endswith(('.png', '.jpg', '.jpeg'))
-    contexto = {"test": test_obj, "preguntas": preguntas, "intento": intento}
+    contexto = {
+        "test": test_obj,
+        "preguntas": preguntas,
+        "intento": intento,
+        "duracion_minutos": getattr(settings, 'DURACION_PRUEBA_MINUTOS', 10),
+    }
     if es_razonamiento:
         return render(request, "test_razonamiento.html", contexto)
     return render(request, "test.html", contexto)

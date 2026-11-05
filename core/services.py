@@ -7,13 +7,21 @@ from google import genai
 from google.genai import types
 
 
+MODELO_GEMINI = getattr(settings, 'GEMINI_MODEL', 'gemini-3.8-flash')
+
+# El primero es el modelo configurado; los demás son respaldos por si el
+# principal deja de estar disponible en la API.
+MODELOS_GEMINI = [
+    MODELO_GEMINI,
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+]
+
+
 def generar_contenido_seguro(prompt_texto):
   client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-  modelos_disponibles = [
-      'gemini-2.0-flash',
-      'gemini-flash-latest',
-  ]
+  modelos_disponibles = MODELOS_GEMINI
 
   intentos_maximos = 3
   ultimo_error = None
@@ -63,7 +71,7 @@ def generar_o_modificar_prueba(necesidades_empresa, tipo_prueba):
     """
 
   response = client.models.generate_content(
-      model='gemini-2.5-flash',
+      model=MODELO_GEMINI,
       contents=prompt,
       config=types.GenerateContentConfig(
           system_instruction=system_instruction,
@@ -116,7 +124,7 @@ def evaluar_candidato_con_criterios_empresa(
   contents.append(prompt)
 
   response = client.models.generate_content(
-      model='gemini-2.5-flash',
+      model=MODELO_GEMINI,
       contents=contents,
       config=types.GenerateContentConfig(
           system_instruction=system_instruction,
@@ -397,7 +405,7 @@ def evaluar_candidato_estructurado(
     prueba y devuelve solo el JSON solicitado.
     """
 
-  modelos_disponibles = ['gemini-2.5-flash', 'gemini-2.0-flash']
+  modelos_disponibles = MODELOS_GEMINI
   intentos_maximos = 3
   ultimo_error = None
 
@@ -544,7 +552,7 @@ def asistente_criterios_evaluacion(
     Responde con el JSON solicitado.
     """
 
-  modelos_disponibles = ['gemini-2.5-flash', 'gemini-2.0-flash']
+  modelos_disponibles = MODELOS_GEMINI
   intentos_maximos = 3
   ultimo_error = None
 
