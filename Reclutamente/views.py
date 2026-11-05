@@ -2454,6 +2454,13 @@ def _plantilla_test(preguntas):
     primera = preguntas.first() if hasattr(preguntas, "first") else None
     if primera is None:
         return "test.html"
+    nombre = ""
+    if getattr(primera, "test_id", None):
+        nombre = (primera.test.nombre or "").lower()
+    if "dass" in nombre:
+        return "test_dass.html"
+    if "frases incompletas" in nombre:
+        return "test_frases.html"
     texto = (primera.texto_pregunta or "").strip()
     bajo = texto.lower()
     if "\n" not in texto and bajo.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
