@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('estado', models.CharField(choices=[('iniciado', 'Iniciado'), ('en_progreso', 'En progreso'), ('completado', 'Completado')], default='iniciado', max_length=30)),
-                ('fecha', models.DateField(auto_now_add=True)),
+                ('fecha', models.DateTimeField(auto_now_add=True)),
                 ('duracion_minutos', models.PositiveIntegerField(blank=True, null=True)),
                 ('puntaje_total', models.DecimalField(blank=True, decimal_places=2, max_digits=6, null=True)),
                 ('puntaje_dimensiones', models.TextField(blank=True)),
