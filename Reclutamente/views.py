@@ -61,7 +61,7 @@ from google import genai
 
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import csv
 import json
 import logging
@@ -1055,6 +1055,231 @@ FABRIC_CAMPOS_CSV = [
     'prueba_brechas_ia',
     'prueba_informe_ia',
 ]
+
+
+def _fabric_embed_se_puede_mostrar(url):
+    """Indica si la URL del tablero se puede cargar dentro de un iframe.
+
+    Los enlaces de "uso compartido" de Power BI responden con
+    ``X-Frame-Options: deny`` y una política ``frame-ancestors`` que no
+    incluye este dominio, así que el navegador los bloquea dentro de la
+    aplicación. Solo las URLs de inserción (``/view`` o ``/reportEmbed``)
+    se pueden mostrar embebidas.
+    """
+
+    if not url:
+        return False
+
+    partes = urlparse(url)
+    host = (partes.hostname or '').lower()
+    ruta = (partes.path or '').lower()
+
+    if not host:
+        return False
+
+    if host.endswith('powerbi.com') or host.endswith('fabric.microsoft.com'):
+        return (
+            ruta.startswith('/view')
+            or ruta.startswith('/reportembed')
+            or ruta.startswith('/embed')
+        )
+
+    return True
+
+
+DIMENSIONES_ETIQUETAS = {
+    'C': 'Colérico',
+    'S': 'Sanguíneo',
+    'F': 'Flemático',
+    'M': 'Melancólico',
+}
+
+
+def _barras_dimensiones_etiquetadas(intentos):
+    """Devuelve las dimensiones con su nombre legible para el tablero."""
+
+    barras = _barras_dimensiones(intentos)
+    for barra in barras:
+        barra['nombre'] = DIMENSIONES_ETIQUETAS.get(
+            barra['nombre'], barra['nombre']
+        )
+    return barras
+
+
+def _tablero_fabric(plaza):
+    """Resume los resultados de la vacante para el tablero integrado."""
+
+    grupos = _intentos_completados_por_persona(plaza)
+    grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+    candidatos = []
+    evaluados = 0
+    suma_puntajes = 0
+    recomendaciones = {}
+    dimensiones = {}
+    pruebas = {}
+
+    for intentos in grupos:
+        representante = intentos[0]
+        analisis = _analisis_guardado(intentos)
+        perfil = (
+            analisis.perfil
+            if analisis and isinstance(analisis.perfil, dict)
+            else {}
+        )
+
+        puntaje = _puntaje_numerico(perfil.get('puntaje'))
+        recomendacion = (perfil.get('recomendacion') or 'Sin evaluación').strip()
+        nivel = _nivel_puntaje(puntaje)
+
+        if puntaje is not None:
+            evaluados += 1
+            suma_puntajes += puntaje
+
+        recomendaciones[recomendacion] = (
+            recomendaciones.get(recomendacion, 0) + 1
+        )
+
+        for intento in intentos:
+            for nombre, valor in _dimensiones_intento(intento).items():
+                dimensiones[nombre] = dimensiones.get(nombre, 0) + valor
+            nombre_prueba = intento.test.nombre if intento.test else 'Prueba'
+            pruebas[nombre_prueba] = pruebas.get(nombre_prueba, 0) + 1
+
+        pruebas_candidato = []
+        for prueba in perfil.get('pruebas') or []:
+            if not isinstance(prueba, dict):
+                continue
+            valor_prueba = _puntaje_numerico(prueba.get('puntaje'))
+            pruebas_candidato.append(
+                {
+                    'nombre': prueba.get('test') or 'Prueba',
+                    'puntaje': valor_prueba,
+                    'porcentaje': max(0.0, min(100.0, valor_prueba or 0)),
+                    'fortalezas': [
+                        str(texto)
+                        for texto in (prueba.get('fortalezas') or [])
+                        if texto
+                    ],
+                    'brechas': [
+                        str(texto)
+                        for texto in (prueba.get('brechas') or [])
+                        if texto
+                    ],
+                    'informe': (prueba.get('informe') or '').strip(),
+                }
+            )
+
+        if not pruebas_candidato:
+            pruebas_candidato = [
+                {
+                    'nombre': intento.test.nombre if intento.test else 'Prueba',
+                    'puntaje': _puntaje_numerico(intento.puntaje_total),
+                    'porcentaje': max(
+                        0.0,
+                        min(100.0, _puntaje_numerico(intento.puntaje_total) or 0),
+                    ),
+                    'fortalezas': [],
+                    'brechas': [],
+                    'informe': '',
+                }
+                for intento in intentos
+            ]
+
+        fecha_evaluacion = _formatear_fecha_iso(perfil.get('evaluado_en'))
+        if not fecha_evaluacion and representante.fecha:
+            fecha_evaluacion = timezone.localtime(
+                representante.fecha
+            ).strftime('%d/%m/%Y %H:%M')
+
+        candidatos.append(
+            {
+                'id': representante.persona.id,
+                'nombre': representante.persona.nombre,
+                'email': representante.persona.email or '',
+                'puntaje': puntaje,
+                'porcentaje': max(0.0, min(100.0, puntaje or 0)),
+                'color': nivel['color'],
+                'etiqueta': nivel['etiqueta'],
+                'recomendacion': recomendacion,
+                'fortalezas': [
+                    str(texto) for texto in (perfil.get('fortalezas') or []) if texto
+                ],
+                'brechas': [
+                    str(texto) for texto in (perfil.get('brechas') or []) if texto
+                ],
+                'informe': (analisis.informe_texto or '').strip() if analisis else '',
+                'modelo': (analisis.modelo_usado or '') if analisis else '',
+                'fecha': fecha_evaluacion,
+                'total_pruebas': len(intentos),
+                'pruebas': pruebas_candidato,
+                'dimensiones': _barras_dimensiones_etiquetadas(intentos),
+                'historial': len(_historial_analisis(analisis)),
+            }
+        )
+
+    candidatos.sort(
+        key=lambda item: (item['puntaje'] is None, -(item['puntaje'] or 0))
+    )
+
+    for posicion, item in enumerate(candidatos, start=1):
+        item['posicion'] = posicion
+
+    maximo_dimension = max(dimensiones.values()) if dimensiones else 0
+    barras_dimensiones = [
+        {
+            'nombre': DIMENSIONES_ETIQUETAS.get(nombre, nombre),
+            'valor': round(valor, 1),
+            'porcentaje': (
+                round((valor / maximo_dimension) * 100, 1)
+                if maximo_dimension
+                else 0
+            ),
+        }
+        for nombre, valor in sorted(
+            dimensiones.items(), key=lambda elemento: elemento[1], reverse=True
+        )
+    ]
+
+    total_grupos = len(grupos) or 1
+    colores_recomendacion = {
+        'Apto': '#10b981',
+        'En revisión': '#f59e0b',
+        'No apto': '#ef4444',
+    }
+    barras_recomendaciones = [
+        {
+            'etiqueta': etiqueta,
+            'cantidad': cantidad,
+            'porcentaje': round((cantidad / total_grupos) * 100, 1),
+            'color': colores_recomendacion.get(etiqueta, '#6366f1'),
+        }
+        for etiqueta, cantidad in sorted(
+            recomendaciones.items(), key=lambda elemento: -elemento[1]
+        )
+    ]
+
+    return {
+        'total_candidatos': len(grupos),
+        'total_evaluados': evaluados,
+        'promedio': (
+            round(suma_puntajes / evaluados, 1) if evaluados else None
+        ),
+        'candidatos': candidatos,
+        'candidato_inicial': candidatos[0]['id'] if candidatos else None,
+        'dimensiones': barras_dimensiones,
+        'recomendaciones': barras_recomendaciones,
+        'pruebas': [
+            {'nombre': nombre, 'cantidad': cantidad}
+            for nombre, cantidad in sorted(
+                pruebas.items(), key=lambda elemento: -elemento[1]
+            )
+        ],
+        'total_intentos': sum(pruebas.values()),
+        'actualizado_en': timezone.localtime(timezone.now()).strftime(
+            '%d/%m/%Y %H:%M'
+        ),
+    }
 
 
 def _datos_exportacion_fabric(plaza):
@@ -3765,6 +3990,8 @@ def empresa_evaluar_participantes_ia(request, pk):
 
 
 
+    fabric_embed_url = getattr(settings, 'FABRIC_POWERBI_EMBED_URL', '')
+
     context = {
 
         'plaza': plaza,
@@ -3800,9 +4027,11 @@ def empresa_evaluar_participantes_ia(request, pk):
         'resultados_ia': resultados_ia,
 
         'errores': errores,
-        'fabric_embed_url': getattr(
-            settings, 'FABRIC_POWERBI_EMBED_URL', ''
+        'fabric_embed_url': fabric_embed_url,
+        'fabric_embed_disponible': _fabric_embed_se_puede_mostrar(
+            fabric_embed_url
         ),
+        'tablero_fabric': _tablero_fabric(plaza),
         'fabric_workspace_url': getattr(
             settings, 'FABRIC_WORKSPACE_URL', ''
         ),

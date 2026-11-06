@@ -1,0 +1,56 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "b2000000000000000002",
+  "position": {
+    "x": 320,
+    "y": 20,
+    "z": 1000,
+    "height": 280,
+    "width": 940,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "test_nombre"
+                }
+              },
+              "queryRef": "evaluaciones.test_nombre",
+              "nativeQueryRef": "test_nombre"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "Promedio puntaje pruebas"
+                }
+              },
+              "queryRef": "evaluaciones.Promedio puntaje pruebas",
+              "nativeQueryRef": "Promedio puntaje pruebas"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

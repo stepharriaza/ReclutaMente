@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "ReclutaMente"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "8b2d3c4e-5f6a-4b7c-9d0e-1f2a3b4c5d6e"
+  }
+}

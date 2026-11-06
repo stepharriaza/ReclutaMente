@@ -1,0 +1,56 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "b1000000000000000006",
+  "position": {
+    "x": 660,
+    "y": 150,
+    "z": 5000,
+    "height": 280,
+    "width": 600,
+    "tabOrder": 5000
+  },
+  "visual": {
+    "visualType": "donutChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "recomendacion_ia"
+                }
+              },
+              "queryRef": "evaluaciones.recomendacion_ia",
+              "nativeQueryRef": "recomendacion_ia"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "Total candidatos"
+                }
+              },
+              "queryRef": "evaluaciones.Total candidatos",
+              "nativeQueryRef": "Total candidatos"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

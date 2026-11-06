@@ -1,0 +1,170 @@
+table evaluaciones
+	column generado_en
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: generado_en
+	column empresa_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: empresa_id
+	column empresa_nombre
+		dataType: string
+		summarizeBy: none
+		sourceColumn: empresa_nombre
+	column plaza_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: plaza_id
+	column plaza_nombre
+		dataType: string
+		summarizeBy: none
+		sourceColumn: plaza_nombre
+	column persona_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: persona_id
+	column persona_nombre
+		dataType: string
+		summarizeBy: none
+		sourceColumn: persona_nombre
+	column persona_email
+		dataType: string
+		summarizeBy: none
+		sourceColumn: persona_email
+	column puntaje_ia
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: puntaje_ia
+	column recomendacion_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: recomendacion_ia
+	column fortalezas_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: fortalezas_ia
+	column brechas_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: brechas_ia
+	column informe_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: informe_ia
+	column criterios
+		dataType: string
+		summarizeBy: none
+		sourceColumn: criterios
+	column sesgo
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sesgo
+	column sesgo_detalle
+		dataType: string
+		summarizeBy: none
+		sourceColumn: sesgo_detalle
+	column intento_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: intento_id
+	column test_id
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: test_id
+	column test_nombre
+		dataType: string
+		summarizeBy: none
+		sourceColumn: test_nombre
+	column fecha_intento
+		dataType: dateTime
+		formatString: General Date
+		summarizeBy: none
+		sourceColumn: fecha_intento
+	column puntaje_total
+		dataType: double
+		formatString: 0.0
+		summarizeBy: none
+		sourceColumn: puntaje_total
+	column puntaje_dimensiones_json
+		dataType: string
+		summarizeBy: none
+		sourceColumn: puntaje_dimensiones_json
+	column prueba_puntaje_ia
+		dataType: int64
+		formatString: 0
+		summarizeBy: none
+		sourceColumn: prueba_puntaje_ia
+	column prueba_fortalezas_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: prueba_fortalezas_ia
+	column prueba_brechas_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: prueba_brechas_ia
+	column prueba_informe_ia
+		dataType: string
+		summarizeBy: none
+		sourceColumn: prueba_informe_ia
+	measure 'Total candidatos' = DISTINCTCOUNT(evaluaciones[persona_id])
+		formatString: 0
+	measure 'Total evaluaciones' = COUNTROWS(evaluaciones)
+		formatString: 0
+	measure 'Promedio puntaje IA' = AVERAGE(evaluaciones[puntaje_ia])
+		formatString: 0.0
+	measure 'Promedio puntaje pruebas' = AVERAGE(evaluaciones[puntaje_total])
+		formatString: 0.0
+	measure 'Candidatos recomendados' = CALCULATE(DISTINCTCOUNT(evaluaciones[persona_id]), FILTER(evaluaciones, SEARCH("Recomendado", evaluaciones[recomendacion_ia], 1, 0) = 1 || CONTAINSSTRING(evaluaciones[recomendacion_ia], "Altamente")))
+		formatString: 0
+	measure '% Recomendados' = DIVIDE([Candidatos recomendados], [Total candidatos])
+		formatString: 0.0%
+	measure 'Brecha IA vs pruebas' = [Promedio puntaje IA] - [Promedio puntaje pruebas]
+		formatString: 0.0
+	partition evaluaciones = m
+		mode: import
+		source =
+			#table(
+				type table [
+					generado_en = datetime,
+					empresa_id = number,
+					empresa_nombre = text,
+					plaza_id = number,
+					plaza_nombre = text,
+					persona_id = number,
+					persona_nombre = text,
+					persona_email = text,
+					puntaje_ia = number,
+					recomendacion_ia = text,
+					fortalezas_ia = text,
+					brechas_ia = text,
+					informe_ia = text,
+					criterios = text,
+					sesgo = text,
+					sesgo_detalle = text,
+					intento_id = number,
+					test_id = number,
+					test_nombre = text,
+					fecha_intento = datetime,
+					puntaje_total = number,
+					puntaje_dimensiones_json = text,
+					prueba_puntaje_ia = number,
+					prueba_fortalezas_ia = text,
+					prueba_brechas_ia = text,
+					prueba_informe_ia = text
+				],
+				{
+					{ #datetime(2026,11,5,14,30,0), 1, "Empresa Demo", 3, "Desarrollador Backend", 10, "Ana Perez", "ana.perez@example.com", 88, "Recomendado", "Trabajo en equipo | Resolucion de problemas", "Experiencia en cloud", "Desempeno sobresaliente en las pruebas aplicadas.", "Pensamiento logico y comunicacion", "equilibrado", "", 101, 2, "Prueba de logica", #datetime(2026,11,5,13,0,0), 82.5, "{""razonamiento"":85,""atencion"":80}", 84, "Analisis", "Velocidad", "Buen desempeno en razonamiento." },
+					{ #datetime(2026,11,5,14,30,0), 1, "Empresa Demo", 3, "Desarrollador Backend", 10, "Ana Perez", "ana.perez@example.com", 88, "Recomendado", "Trabajo en equipo | Resolucion de problemas", "Experiencia en cloud", "Desempeno sobresaliente en las pruebas aplicadas.", "Pensamiento logico y comunicacion", "equilibrado", "", 102, 3, "Prueba de personalidad", #datetime(2026,11,5,13,20,0), 90.0, "{""liderazgo"":88,""empatia"":92}", 86, "Comunicacion", "Delegacion", "Perfil colaborativo." },
+					{ #datetime(2026,11,5,15,0,0), 1, "Empresa Demo", 3, "Desarrollador Backend", 11, "Luis Gomez", "luis.gomez@example.com", 65, "Recomendado con reservas", "Pensamiento analitico", "Comunicacion", "Cumple parcialmente el perfil.", "Pensamiento logico y comunicacion", "moderado", "Criterio de comunicacion con peso alto", 103, 2, "Prueba de logica", #datetime(2026,11,5,14,10,0), 61.0, "{""razonamiento"":65,""atencion"":57}", 63, "Analisis", "Rapidez", "Desempeno promedio." },
+					{ #datetime(2026,11,5,15,0,0), 1, "Empresa Demo", 3, "Desarrollador Backend", 11, "Luis Gomez", "luis.gomez@example.com", 65, "Recomendado con reservas", "Pensamiento analitico", "Comunicacion", "Cumple parcialmente el perfil.", "Pensamiento logico y comunicacion", "moderado", "Criterio de comunicacion con peso alto", 104, 3, "Prueba de personalidad", #datetime(2026,11,5,14,30,0), 58.5, "{""liderazgo"":55,""empatia"":62}", 60, "Empatia", "Asertividad", "Requiere desarrollo." },
+					{ #datetime(2026,11,5,16,0,0), 1, "Empresa Demo", 4, "Analista de Datos", 12, "Marta Ruiz", "marta.ruiz@example.com", 48, "No recomendado", "Creatividad", "Analisis cuantitativo", "No alcanza el minimo esperado.", "Analisis cuantitativo", "equilibrado", "", 105, 2, "Prueba de logica", #datetime(2026,11,5,15,10,0), 45.0, "{""razonamiento"":42,""atencion"":48}", 50, "Creatividad", "Precision", "Bajo desempeno." },
+					{ #datetime(2026,11,5,16,0,0), 1, "Empresa Demo", 4, "Analista de Datos", 12, "Marta Ruiz", "marta.ruiz@example.com", 48, "No recomendado", "Creatividad", "Analisis cuantitativo", "No alcanza el minimo esperado.", "Analisis cuantitativo", "equilibrado", "", 106, 3, "Prueba de personalidad", #datetime(2026,11,5,15,30,0), 52.0, "{""liderazgo"":50,""empatia"":54}", 46, "Creatividad", "Constancia", "Perfil en desarrollo." }
+				}
+			)

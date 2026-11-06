@@ -1,0 +1,108 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "b2000000000000000003",
+  "position": {
+    "x": 20,
+    "y": 320,
+    "z": 2000,
+    "height": 380,
+    "width": 1240,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "persona_nombre"
+                }
+              },
+              "queryRef": "evaluaciones.persona_nombre",
+              "nativeQueryRef": "persona_nombre"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "test_nombre"
+                }
+              },
+              "queryRef": "evaluaciones.test_nombre",
+              "nativeQueryRef": "test_nombre"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "fecha_intento"
+                }
+              },
+              "queryRef": "evaluaciones.fecha_intento",
+              "nativeQueryRef": "fecha_intento"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "puntaje_total"
+                }
+              },
+              "queryRef": "evaluaciones.puntaje_total",
+              "nativeQueryRef": "puntaje_total"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "prueba_puntaje_ia"
+                }
+              },
+              "queryRef": "evaluaciones.prueba_puntaje_ia",
+              "nativeQueryRef": "prueba_puntaje_ia"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "recomendacion_ia"
+                }
+              },
+              "queryRef": "evaluaciones.recomendacion_ia",
+              "nativeQueryRef": "recomendacion_ia"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}
