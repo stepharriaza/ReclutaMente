@@ -7,3 +7,7 @@ __pycache__/
 
 # Base de datos local
 db.sqlite3
+
+# Logs del servidor local
+server.out.log
+server.err.log

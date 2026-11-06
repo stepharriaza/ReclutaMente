@@ -40,7 +40,7 @@ from rest_framework.response import Response
 
 from rest_framework import status
 from core.models import Categoria, EstadoTest, Test, Intento
-from core.models import Certificado, EstadoIntento
+from core.models import Certificado, EstadoIntento, AnalisisIA
 from django.db.models import Q
 
 from core.models import Bitacora
@@ -94,6 +94,7 @@ from core.services import (
     describir_sesgo_calificacion,
 
     evaluar_candidato_con_criterios_empresa,
+    evaluar_candidato_estructurado,
     generar_o_modificar_prueba,
 
 )
@@ -165,6 +166,849 @@ def _get_persona_for_user(usuario):
         persona = Persona.objects.filter(usuario__email=usuario.email).first()
 
     return persona
+
+
+def _intentos_completados_por_persona(plaza):
+
+    intentos = (
+
+        Intento.objects.filter(
+
+            postulacion__convocatoria__plaza=plaza,
+
+            estado=EstadoIntento.COMPLETADO,
+
+        )
+
+        .select_related(
+
+            'persona',
+
+            'persona__usuario',
+
+            'test',
+
+            'postulacion',
+
+            'postulacion__convocatoria',
+
+        )
+
+        .prefetch_related('respuestas__pregunta')
+
+        .order_by('persona_id', '-fecha', '-id')
+
+    )
+
+
+
+    agrupados = {}
+
+    for intento in intentos:
+
+        agrupados.setdefault(intento.persona_id, []).append(intento)
+
+    return list(agrupados.values())
+
+
+
+
+
+def _contexto_plaza_para_ia(plaza):
+
+    return (
+
+        f'Puesto: {plaza.nombre}\n'
+
+        f'Descripción: {plaza.descripcion or "No especificada"}\n'
+
+        f'Requisitos originales: {plaza.requisitos or "No especificados"}'
+
+    )
+
+
+
+
+
+def _perfiles_para_formulario():
+
+    return [
+
+        {
+
+            'valor': clave,
+
+            'etiqueta': descripcion.split(':')[0],
+
+            'descripcion': descripcion,
+
+        }
+
+        for clave, descripcion in PERFILES_OBJETIVO.items()
+
+    ]
+
+
+
+
+
+def _competencias_para_formulario():
+
+    return [
+
+        {'valor': clave, 'etiqueta': etiqueta}
+
+        for clave, etiqueta in COMPETENCIAS_EVALUACION.items()
+
+    ]
+
+
+
+
+
+def _sesgos_para_formulario():
+
+    return [
+
+        {
+
+            'valor': clave,
+
+            'etiqueta': clave.replace('_', ' ').capitalize(),
+
+            'descripcion': descripcion,
+
+        }
+
+        for clave, descripcion in SESGOS_CALIFICACION.items()
+
+    ]
+
+
+
+
+
+def _componer_criterios(
+
+    perfil='', competencias=None, otros='', criterios_texto=''
+
+):
+
+    partes = []
+
+    if perfil in PERFILES_OBJETIVO:
+
+        partes.append(f'Perfil buscado: {PERFILES_OBJETIVO[perfil]}')
+
+    competencias = [
+
+        clave for clave in (competencias or []) if clave in COMPETENCIAS_EVALUACION
+
+    ]
+
+    if competencias:
+
+        etiquetas = [
+
+            COMPETENCIAS_EVALUACION[clave] for clave in competencias
+
+        ]
+
+        partes.append('Competencias clave: ' + ', '.join(etiquetas))
+
+    if otros:
+
+        partes.append(f'Otros criterios: {otros}')
+
+    if partes:
+
+        return '\n'.join(partes)
+
+    return criterios_texto
+
+
+
+
+
+def _criterios_desde_formulario(request):
+
+    perfil = request.POST.get('perfil_objetivo', '').strip()
+
+    if perfil not in PERFILES_OBJETIVO:
+
+        perfil = ''
+
+
+
+    competencias = [
+
+        clave
+
+        for clave in request.POST.getlist('competencias')
+
+        if clave in COMPETENCIAS_EVALUACION
+
+    ]
+
+    otros = request.POST.get('otros_criterios', '').strip()[:1000]
+
+    criterios_texto = request.POST.get('criterios', '').strip()
+
+    if criterios_texto:
+
+        criterios = criterios_texto
+
+    else:
+
+        criterios = _componer_criterios(
+
+            perfil, competencias, otros, criterios_texto
+
+        )
+
+    return criterios, perfil, competencias, otros
+
+
+
+
+
+def _clave_seleccion_ia(plaza):
+
+    return f'evaluacion_ia_plaza_{plaza.id}'
+
+
+
+
+
+def _seleccion_ia_guardada(request, plaza):
+
+    seleccion = request.session.get(_clave_seleccion_ia(plaza), {})
+
+    return seleccion if isinstance(seleccion, dict) else {}
+
+
+
+
+
+def _guardar_seleccion_ia(
+
+    request,
+
+    plaza,
+
+    perfil,
+
+    competencias,
+
+    otros,
+
+    sesgo,
+
+    sesgo_detalle,
+
+    criterios_texto='',
+
+):
+
+    request.session[_clave_seleccion_ia(plaza)] = {
+
+        'perfil_objetivo': perfil,
+
+        'competencias': competencias,
+
+        'otros_criterios': otros,
+
+        'sesgo': sesgo,
+
+        'sesgo_detalle': sesgo_detalle,
+
+        'criterios_texto': criterios_texto,
+
+    }
+
+
+
+
+
+def _construir_evidencia_candidato(intentos):
+
+    persona = intentos[0].persona
+
+    lineas = [f'Candidato: {persona.nombre}']
+
+
+
+    for intento in intentos:
+
+        lineas.append(f'Prueba: {intento.test.nombre}')
+
+        lineas.append(f'ID de la prueba: {intento.id}')
+
+        lineas.append(f'Fecha: {intento.fecha}')
+
+        if intento.puntaje_total is None:
+
+            lineas.append('Puntaje registrado: No disponible')
+
+        else:
+
+            lineas.append(f'Puntaje registrado: {intento.puntaje_total}')
+
+        if intento.puntaje_dimensiones:
+
+            lineas.append(f'Puntajes por dimensión: {intento.puntaje_dimensiones}')
+
+
+
+        respuestas = list(intento.respuestas.all())
+
+        if not respuestas:
+
+            lineas.append('Respuestas: sin respuestas registradas.')
+
+            continue
+
+
+
+        lineas.append('Respuestas:')
+
+        for respuesta in respuestas:
+
+            dimension = (
+
+                respuesta.dimension
+
+                or respuesta.pregunta.dimension
+
+                or 'General'
+
+            )
+
+            lineas.append(
+
+                f'- [{dimension}] {respuesta.pregunta.texto_pregunta}: '
+
+                f'{respuesta.texto_respuesta or "(sin respuesta)"}'
+
+            )
+
+
+
+    return '\n'.join(lineas)
+
+
+
+
+
+def _dimensiones_intento(intento):
+
+    """Devuelve el desglose por dimensión de un intento como dict numérico."""
+
+    if not intento or not intento.puntaje_dimensiones:
+
+        return {}
+
+    try:
+
+        datos = json.loads(intento.puntaje_dimensiones)
+
+    except (TypeError, ValueError):
+
+        return {}
+
+    if not isinstance(datos, dict):
+
+        return {}
+
+
+
+    dimensiones = {}
+
+    for nombre, valor in datos.items():
+
+        try:
+
+            dimensiones[str(nombre)] = float(valor)
+
+        except (TypeError, ValueError):
+
+            continue
+
+    return dimensiones
+
+
+
+
+
+def _barras_dimensiones(intentos):
+
+    """Agrupa los puntajes por dimensión y los normaliza para graficarlos."""
+
+    totales = {}
+
+    for intento in intentos or []:
+
+        for nombre, valor in _dimensiones_intento(intento).items():
+
+            totales[nombre] = totales.get(nombre, 0) + valor
+
+
+
+    if not totales:
+
+        return []
+
+
+
+    maximo = max(totales.values()) or 1
+
+    barras = []
+
+    for nombre, valor in sorted(
+
+        totales.items(), key=lambda elemento: elemento[1], reverse=True
+
+    ):
+
+        barras.append(
+
+            {
+
+                'nombre': nombre,
+
+                'valor': round(valor, 1),
+
+                'porcentaje': round((valor / maximo) * 100, 1),
+
+            }
+
+        )
+
+    return barras
+
+
+
+
+
+def _barras_pruebas(resultado):
+
+    """Convierte el puntaje 0-100 de cada prueba en barras para la gráfica."""
+
+    barras = []
+
+    for prueba in (resultado or {}).get('pruebas') or []:
+
+        try:
+
+            valor = float(prueba.get('puntaje'))
+
+        except (TypeError, ValueError):
+
+            continue
+
+        valor = max(0.0, min(100.0, valor))
+
+        barras.append(
+
+            {
+
+                'nombre': prueba.get('test') or 'Prueba',
+
+                'valor': round(valor, 1),
+
+                'porcentaje': round(valor, 1),
+
+            }
+
+        )
+
+    return barras
+
+
+
+
+
+def _nivel_puntaje(puntaje):
+
+    """Clasifica el puntaje global para dar color y contexto en el informe."""
+
+    try:
+
+        valor = float(puntaje)
+
+    except (TypeError, ValueError):
+
+        return {
+
+            'etiqueta': 'Sin puntaje',
+
+            'descripcion': 'La IA no asignó un puntaje global.',
+
+            'color': '#6366f1',
+
+        }
+
+
+
+    if valor >= 80:
+
+        return {
+
+            'etiqueta': 'Desempeño alto',
+
+            'descripcion': 'Puntaje alto: cumple ampliamente con el criterio evaluado.',
+
+            'color': '#10b981',
+
+        }
+
+    if valor >= 60:
+
+        return {
+
+            'etiqueta': 'Desempeño medio',
+
+            'descripcion': 'Puntaje medio: cumple parcialmente con el criterio evaluado.',
+
+            'color': '#6366f1',
+
+        }
+
+    return {
+
+        'etiqueta': 'Desempeño bajo',
+
+        'descripcion': 'Puntaje bajo: hay brechas importantes frente al criterio evaluado.',
+
+        'color': '#ef4444',
+
+    }
+
+
+
+
+
+def _puntaje_numerico(puntaje):
+
+    try:
+
+        return float(puntaje)
+
+    except (TypeError, ValueError):
+
+        return None
+
+
+
+
+
+def _clave_orden_resultado(item):
+
+    valor = _puntaje_numerico(item['resultado'].get('puntaje'))
+
+    return (
+
+        valor is None,
+
+        -(valor or 0),
+
+        item['persona'].nombre.lower(),
+
+    )
+
+
+
+
+
+def _decorar_resultados_ia(resultados_ia):
+
+    """Agrega los datos de gráficas y ordena los resultados para el informe."""
+
+    for item in resultados_ia:
+
+        item['nivel'] = _nivel_puntaje(item['resultado'].get('puntaje'))
+
+        item['barras_pruebas'] = _barras_pruebas(item['resultado'])
+
+        item['barras_dimensiones'] = _barras_dimensiones(item['intentos'])
+
+        for detalle in item['pruebas_detalle']:
+
+            intento = detalle.get('intento')
+
+            detalle['barras_dimensiones'] = (
+
+                _barras_dimensiones([intento]) if intento else []
+
+            )
+
+
+
+    resultados_ia.sort(key=_clave_orden_resultado)
+
+    return resultados_ia
+
+
+
+
+
+def _resultado_desde_analisis(analisis):
+
+    """Reconstruye el resultado visible a partir de un análisis guardado."""
+
+    perfil = analisis.perfil if isinstance(analisis.perfil, dict) else {}
+
+    return {
+
+        'puntaje': perfil.get('puntaje'),
+
+        'recomendacion': perfil.get('recomendacion', ''),
+
+        'fortalezas': perfil.get('fortalezas') or [],
+
+        'brechas': perfil.get('brechas') or [],
+
+        'informe': analisis.informe_texto or '',
+
+        'pruebas': perfil.get('pruebas') or [],
+
+        'modelo': analisis.modelo_usado or '',
+
+    }
+
+
+FABRIC_CAMPOS_CSV = [
+    'generado_en',
+    'empresa_id',
+    'empresa_nombre',
+    'plaza_id',
+    'plaza_nombre',
+    'persona_id',
+    'persona_nombre',
+    'persona_email',
+    'puntaje_ia',
+    'recomendacion_ia',
+    'fortalezas_ia',
+    'brechas_ia',
+    'informe_ia',
+    'criterios',
+    'sesgo',
+    'sesgo_detalle',
+    'intento_id',
+    'test_id',
+    'test_nombre',
+    'fecha_intento',
+    'puntaje_total',
+    'puntaje_dimensiones_json',
+    'prueba_puntaje_ia',
+    'prueba_fortalezas_ia',
+    'prueba_brechas_ia',
+    'prueba_informe_ia',
+]
+
+
+def _datos_exportacion_fabric(plaza):
+    """Arma el conjunto de resultados de una vacante para Microsoft Fabric."""
+    grupos = _intentos_completados_por_persona(plaza)
+    grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+    candidatos = []
+    for intentos in grupos:
+        representante = intentos[0]
+        analisis = AnalisisIA.objects.filter(intento=representante).first()
+        perfil = (
+            analisis.perfil
+            if analisis and isinstance(analisis.perfil, dict)
+            else {}
+        )
+
+        analisis_por_intento = {}
+        for prueba in perfil.get('pruebas') or []:
+            try:
+                analisis_por_intento[int(prueba.get('intento_id'))] = prueba
+            except (TypeError, ValueError):
+                continue
+
+        intentos_datos = []
+        for intento in intentos:
+            fecha = intento.fecha
+            if fecha and timezone.is_aware(fecha):
+                fecha = timezone.localtime(fecha)
+            intentos_datos.append(
+                {
+                    'intento_id': intento.id,
+                    'test_id': intento.test_id,
+                    'test': intento.test.nombre if intento.test else '',
+                    'fecha': fecha.isoformat() if fecha else '',
+                    'puntaje_total': (
+                        float(intento.puntaje_total)
+                        if intento.puntaje_total is not None
+                        else None
+                    ),
+                    'puntaje_dimensiones': _dimensiones_intento(intento),
+                    'analisis_ia': analisis_por_intento.get(intento.id),
+                }
+            )
+
+        candidatos.append(
+            {
+                'persona': {
+                    'id': representante.persona_id,
+                    'nombre': representante.persona.nombre,
+                    'email': representante.persona.email,
+                },
+                'puntaje_ia': perfil.get('puntaje'),
+                'recomendacion': perfil.get('recomendacion', ''),
+                'fortalezas': perfil.get('fortalezas') or [],
+                'brechas': perfil.get('brechas') or [],
+                'informe': analisis.informe_texto if analisis else '',
+                'criterios': perfil.get('criterios', ''),
+                'sesgo': perfil.get('sesgo', ''),
+                'sesgo_detalle': perfil.get('sesgo_detalle', ''),
+                'intentos': intentos_datos,
+            }
+        )
+
+    return {
+        'generado_en': timezone.now().isoformat(),
+        'empresa': {
+            'id': plaza.empresa_id,
+            'nombre': plaza.empresa.nombre if plaza.empresa else '',
+        },
+        'plaza': {
+            'id': plaza.id,
+            'nombre': plaza.nombre,
+            'descripcion': plaza.descripcion or '',
+        },
+        'total_candidatos': len(candidatos),
+        'candidatos': candidatos,
+    }
+
+
+def _filas_csv_fabric(datos):
+    """Aplana el conjunto de datos en filas para CSV (una por intento)."""
+    filas = []
+    for candidato in datos.get('candidatos') or []:
+        base = {
+            'generado_en': datos.get('generado_en', ''),
+            'empresa_id': (datos.get('empresa') or {}).get('id', ''),
+            'empresa_nombre': (datos.get('empresa') or {}).get('nombre', ''),
+            'plaza_id': (datos.get('plaza') or {}).get('id', ''),
+            'plaza_nombre': (datos.get('plaza') or {}).get('nombre', ''),
+            'persona_id': (candidato.get('persona') or {}).get('id', ''),
+            'persona_nombre': (candidato.get('persona') or {}).get('nombre', ''),
+            'persona_email': (candidato.get('persona') or {}).get('email', ''),
+            'puntaje_ia': candidato.get('puntaje_ia', ''),
+            'recomendacion_ia': candidato.get('recomendacion', ''),
+            'fortalezas_ia': ' | '.join(candidato.get('fortalezas') or []),
+            'brechas_ia': ' | '.join(candidato.get('brechas') or []),
+            'informe_ia': candidato.get('informe', ''),
+            'criterios': candidato.get('criterios', ''),
+            'sesgo': candidato.get('sesgo', ''),
+            'sesgo_detalle': candidato.get('sesgo_detalle', ''),
+        }
+
+        intentos = candidato.get('intentos') or [{}]
+        for intento in intentos:
+            analisis = intento.get('analisis_ia') or {}
+            fila = dict(base)
+            fila.update(
+                {
+                    'intento_id': intento.get('intento_id', ''),
+                    'test_id': intento.get('test_id', ''),
+                    'test_nombre': intento.get('test', ''),
+                    'fecha_intento': intento.get('fecha', ''),
+                    'puntaje_total': intento.get('puntaje_total', ''),
+                    'puntaje_dimensiones_json': json.dumps(
+                        intento.get('puntaje_dimensiones') or {},
+                        ensure_ascii=False,
+                    ),
+                    'prueba_puntaje_ia': analisis.get('puntaje', ''),
+                    'prueba_fortalezas_ia': ' | '.join(
+                        analisis.get('fortalezas') or []
+                    ),
+                    'prueba_brechas_ia': ' | '.join(
+                        analisis.get('brechas') or []
+                    ),
+                    'prueba_informe_ia': analisis.get('informe', ''),
+                }
+            )
+            filas.append(fila)
+
+    return filas
+
+
+def _guardar_analisis_ia(
+
+    intentos,
+
+    criterios,
+
+    resultado,
+
+    plaza,
+
+    sesgo='',
+
+    sesgo_detalle='',
+
+    perfil_objetivo='',
+
+    competencias=None,
+
+):
+
+    representante = intentos[0]
+
+    perfil = {
+
+        'criterios': criterios,
+
+        'sesgo': sesgo,
+
+        'sesgo_detalle': sesgo_detalle,
+
+        'perfil_objetivo': perfil_objetivo,
+
+        'competencias': competencias or [],
+
+        'puntaje': resultado.get('puntaje'),
+
+        'recomendacion': resultado.get('recomendacion', ''),
+
+        'fortalezas': resultado.get('fortalezas', []),
+
+        'brechas': resultado.get('brechas', []),
+
+        'pruebas': resultado.get('pruebas', []),
+
+        'intentos': [intento.id for intento in intentos],
+
+        'plaza_id': plaza.id,
+
+        'evaluado_en': timezone.now().isoformat(),
+
+    }
+
+    analisis, _ = AnalisisIA.objects.update_or_create(
+
+        intento=representante,
+
+        defaults={
+
+            'perfil': perfil,
+
+            'informe_texto': resultado.get('informe', ''),
+
+            'modelo_usado': resultado.get('modelo', ''),
+
+        },
+
+    )
+
+    return analisis
+
+
 
 
 def _generar_qr_png(data):
@@ -2179,6 +3023,8 @@ def empresa_invitar_participantes(request, pk):
         'persona', 'test', 'postulacion', 'postulacion__convocatoria'
     ).order_by('-fecha')
 
+    seleccion_ia = _seleccion_ia_guardada(request, plaza)
+
     context = {
 
         'plaza': plaza,
@@ -2209,6 +3055,691 @@ def empresa_invitar_participantes(request, pk):
     }
 
     return render(request, 'Empresas/invitar_participantes.html', context)
+
+
+def empresa_evaluar_participantes_ia(request, pk):
+
+    usuario = get_recluta_user(request)
+
+    empresa = _get_empresa_for_user(usuario)
+
+    if not empresa:
+
+        messages.error(request, 'No se encontró una empresa asociada a tu cuenta.')
+
+        return redirect('empresa_dashboard')
+
+
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+
+    grupos = _intentos_completados_por_persona(plaza)
+
+    grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+
+
+    seleccion_guardada = _seleccion_ia_guardada(request, plaza)
+
+
+
+    if request.method == 'POST':
+
+        criterios, perfil_objetivo, competencias, otros_criterios = (
+
+            _criterios_desde_formulario(request)
+
+        )
+
+        sesgo = request.POST.get('sesgo', 'equilibrado')
+
+        sesgo_detalle = request.POST.get('sesgo_detalle', '')
+
+    else:
+
+        perfil_objetivo = seleccion_guardada.get('perfil_objetivo', '')
+
+        if perfil_objetivo not in PERFILES_OBJETIVO:
+
+            perfil_objetivo = ''
+
+        competencias = [
+
+            clave
+
+            for clave in seleccion_guardada.get('competencias', [])
+
+            if clave in COMPETENCIAS_EVALUACION
+
+        ]
+
+        otros_criterios = seleccion_guardada.get('otros_criterios', '')
+
+        criterios = seleccion_guardada.get('criterios_texto', '')
+
+        if not criterios:
+
+            criterios = _componer_criterios(
+
+                perfil_objetivo,
+
+                competencias,
+
+                otros_criterios,
+
+                (plaza.requisitos or ''),
+
+            )
+
+        sesgo = seleccion_guardada.get('sesgo', 'equilibrado')
+
+        sesgo_detalle = seleccion_guardada.get('sesgo_detalle', '')
+
+
+
+    criterios = (criterios or '').strip()
+
+    sesgo = (sesgo or 'equilibrado').strip().lower()
+
+    if sesgo not in SESGOS_CALIFICACION:
+
+        sesgo = 'equilibrado'
+
+    sesgo_detalle = (sesgo_detalle or '').strip()[:500]
+
+
+
+    resultados_ia = []
+
+    errores = []
+
+
+
+    if request.method == 'POST':
+
+        if not criterios:
+
+            messages.error(
+
+                request,
+
+                'Selecciona un perfil, una competencia o escribe otros criterios.',
+
+            )
+
+        elif not grupos:
+
+            messages.warning(
+
+                request,
+
+                'Todavía no hay participantes que hayan completado una prueba.',
+
+            )
+
+        else:
+
+            _guardar_seleccion_ia(
+
+                request,
+
+                plaza,
+
+                perfil_objetivo,
+
+                competencias,
+
+                otros_criterios,
+
+                sesgo,
+
+                sesgo_detalle,
+
+                criterios,
+
+            )
+
+            contexto_plaza = _contexto_plaza_para_ia(plaza)
+
+            for intentos in grupos:
+
+                persona = intentos[0].persona
+
+                try:
+
+                    resultado = evaluar_candidato_estructurado(
+
+                        respuestas_candidato=_construir_evidencia_candidato(intentos),
+
+                        criterios=criterios,
+
+                        contexto_plaza=contexto_plaza,
+
+                        sesgo_calificacion=sesgo,
+
+                        sesgo_detalle=sesgo_detalle,
+
+                    )
+
+                except Exception as exc:
+
+                    errores.append({'persona': persona, 'error': str(exc)})
+
+                    continue
+
+
+
+                analisis = _guardar_analisis_ia(
+
+                    intentos,
+
+                    criterios,
+
+                    resultado,
+
+                    plaza,
+
+                    sesgo=sesgo,
+
+                    sesgo_detalle=sesgo_detalle,
+
+                    perfil_objetivo=perfil_objetivo,
+
+                    competencias=competencias,
+
+                )
+
+
+
+                intentos_por_id = {
+
+                    intento.id: intento for intento in intentos
+
+                }
+
+                pruebas_detalle = [
+
+                    {
+
+                        'resultado': prueba,
+
+                        'intento': intentos_por_id.get(
+
+                            prueba.get('intento_id')
+
+                        ),
+
+                    }
+
+                    for prueba in resultado.get('pruebas', [])
+
+                ]
+
+                resultados_ia.append(
+
+                    {
+
+                        'persona': persona,
+
+                        'intentos': intentos,
+
+                        'resultado': resultado,
+
+                        'analisis': analisis,
+
+                        'sesgo': sesgo,
+
+                        'sesgo_detalle': sesgo_detalle,
+
+                        'perfil_objetivo': perfil_objetivo,
+
+                        'competencias': competencias,
+
+                        'otros_criterios': otros_criterios,
+
+                        'pruebas_detalle': pruebas_detalle,
+
+                    }
+
+                )
+
+
+
+            _decorar_resultados_ia(resultados_ia)
+
+            if resultados_ia:
+
+                messages.success(
+
+                    request,
+
+                    f'Se evaluaron {len(resultados_ia)} participante(s) correctamente.',
+
+                )
+
+            if errores:
+
+                messages.error(
+
+                    request,
+
+                    f'No se pudieron evaluar {len(errores)} participante(s).',
+
+                )
+
+
+
+    candidatos = []
+
+    for intentos in grupos:
+
+        representante = intentos[0]
+
+        analisis = AnalisisIA.objects.filter(intento=representante).first()
+
+        perfil_guardado = (
+
+            analisis.perfil
+
+            if analisis and isinstance(analisis.perfil, dict)
+
+            else {}
+
+        )
+
+        candidatos.append(
+
+            {
+
+                'persona': representante.persona,
+
+                'intentos': intentos,
+
+                'analisis': analisis,
+
+                'nivel': _nivel_puntaje(perfil_guardado.get('puntaje')),
+
+                'barras_dimensiones': _barras_dimensiones(intentos),
+
+            }
+
+        )
+
+
+
+    if not resultados_ia:
+
+        for candidato in candidatos:
+
+            analisis = candidato['analisis']
+
+            if not analisis:
+
+                continue
+
+
+
+            intentos = candidato['intentos']
+
+            intentos_por_id = {intento.id: intento for intento in intentos}
+
+            resultado = _resultado_desde_analisis(analisis)
+
+            pruebas_detalle = [
+
+                {
+
+                    'resultado': prueba,
+
+                    'intento': intentos_por_id.get(prueba.get('intento_id')),
+
+                }
+
+                for prueba in resultado.get('pruebas') or []
+
+            ]
+
+            resultados_ia.append(
+
+                {
+
+                    'persona': candidato['persona'],
+
+                    'intentos': intentos,
+
+                    'resultado': resultado,
+
+                    'analisis': analisis,
+
+                    'pruebas_detalle': pruebas_detalle,
+
+                }
+
+            )
+
+        _decorar_resultados_ia(resultados_ia)
+
+
+
+    candidatos_pendientes = [
+
+        candidato for candidato in candidatos if not candidato['analisis']
+
+    ]
+
+
+
+    context = {
+
+        'plaza': plaza,
+
+        'empresa': empresa,
+
+        'criterios': criterios,
+
+        'sesgo': sesgo,
+
+        'sesgo_detalle': sesgo_detalle,
+
+        'sesgo_label': describir_sesgo_calificacion(sesgo, sesgo_detalle),
+
+        'sesgos': _sesgos_para_formulario(),
+
+        'perfiles': _perfiles_para_formulario(),
+
+        'competencias_opciones': _competencias_para_formulario(),
+
+        'perfil_objetivo': perfil_objetivo,
+
+        'competencias_seleccionadas': competencias,
+
+        'otros_criterios': otros_criterios,
+
+        'candidatos': candidatos,
+
+        'candidatos_pendientes': candidatos_pendientes,
+
+        'total_candidatos': len(candidatos),
+
+        'resultados_ia': resultados_ia,
+
+        'errores': errores,
+        'fabric_embed_url': getattr(
+            settings, 'FABRIC_POWERBI_EMBED_URL', ''
+        ),
+        'fabric_workspace_url': getattr(
+            settings, 'FABRIC_WORKSPACE_URL', ''
+        ),
+        'fabric_ingest_configurado': bool(
+            getattr(settings, 'FABRIC_INGEST_URL', '')
+        ),
+    }
+
+    return render(request, 'Empresas/evaluar_participantes_ia.html', context)
+
+
+
+
+
+@login_required(login_url='login')
+
+def api_asistente_criterios_evaluacion(request, pk):
+
+    if request.method != 'POST':
+
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+
+
+    usuario = get_recluta_user(request)
+
+    empresa = _get_empresa_for_user(usuario)
+
+    if not empresa:
+
+        return JsonResponse(
+
+            {'error': 'No se encontró una empresa asociada a tu cuenta.'},
+
+            status=403,
+
+        )
+
+
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+
+
+
+    try:
+
+        data = json.loads(request.body or '{}')
+
+    except json.JSONDecodeError:
+
+        return JsonResponse({'error': 'Solicitud inválida.'}, status=400)
+
+
+
+    mensaje = str(data.get('mensaje', '')).strip()
+
+    if not mensaje:
+
+        return JsonResponse({'error': 'El mensaje está vacío.'}, status=400)
+
+    if len(mensaje) > 2000:
+
+        return JsonResponse(
+
+            {'error': 'El mensaje es demasiado largo.'}, status=400
+
+        )
+
+
+
+    historial = data.get('historial', [])
+
+    if not isinstance(historial, list):
+
+        historial = []
+
+
+
+    criterios_actuales = str(data.get('criterios', '')).strip()[:2000]
+
+    sesgo_actual = str(data.get('sesgo', '')).strip()
+
+
+
+    try:
+
+        resultado = asistente_criterios_evaluacion(
+
+            contexto_plaza=_contexto_plaza_para_ia(plaza),
+
+            historial=historial,
+
+            mensaje=mensaje,
+
+            criterios_actuales=criterios_actuales,
+
+            sesgo_actual=sesgo_actual,
+
+        )
+
+    except Exception as exc:
+
+        return JsonResponse({'error': str(exc)}, status=500)
+
+
+
+    seleccion = _seleccion_ia_guardada(request, plaza)
+
+    criterios_guardados = (
+
+        str(resultado.get('criterios') or '').strip()
+
+        or seleccion.get('criterios_texto', '')
+
+        or criterios_actuales
+
+    )
+
+    sesgo_guardado = (
+
+        str(resultado.get('sesgo') or '').strip()
+
+        or seleccion.get('sesgo', '')
+
+        or sesgo_actual
+
+        or 'equilibrado'
+
+    )
+
+    if sesgo_guardado not in SESGOS_CALIFICACION:
+
+        sesgo_guardado = 'equilibrado'
+
+    sesgo_detalle_guardado = str(
+
+        resultado.get('sesgo_detalle')
+
+        or seleccion.get('sesgo_detalle', '')
+
+    ).strip()[:500]
+
+
+
+    _guardar_seleccion_ia(
+
+        request,
+
+        plaza,
+
+        seleccion.get('perfil_objetivo', ''),
+
+        seleccion.get('competencias', []),
+
+        seleccion.get('otros_criterios', ''),
+
+        sesgo_guardado,
+
+        sesgo_detalle_guardado,
+
+        criterios_guardados[:2000],
+
+    )
+
+
+
+    return JsonResponse(resultado)
+
+
+@login_required(login_url='login')
+def empresa_exportar_evaluacion_fabric(request, pk):
+    """Descarga los resultados de la vacante en CSV o JSON para Fabric."""
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    if not empresa:
+        messages.error(
+            request,
+            'No se encontró una empresa asociada a tu cuenta.',
+        )
+        return redirect('empresa_dashboard')
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+    datos = _datos_exportacion_fabric(plaza)
+
+    formato = (request.GET.get('formato') or 'csv').strip().lower()
+    marca = timezone.now().strftime('%Y%m%d_%H%M')
+    nombre_base = f'evaluacion_ia_plaza_{plaza.id}_{marca}'
+
+    if formato == 'json':
+        response = JsonResponse(
+            datos,
+            json_dumps_params={'ensure_ascii': False, 'indent': 2},
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{nombre_base}.json"'
+        )
+        return response
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        f'attachment; filename="{nombre_base}.csv"'
+    )
+    response.write('\ufeff')
+    writer = csv.DictWriter(
+        response,
+        fieldnames=FABRIC_CAMPOS_CSV,
+        extrasaction='ignore',
+    )
+    writer.writeheader()
+    for fila in _filas_csv_fabric(datos):
+        writer.writerow(fila)
+    return response
+
+
+@login_required(login_url='login')
+def empresa_enviar_evaluacion_fabric(request, pk):
+    """Envía el JSON de resultados al endpoint de ingesta de Fabric."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    usuario = get_recluta_user(request)
+    empresa = _get_empresa_for_user(usuario)
+    if not empresa:
+        return JsonResponse(
+            {'error': 'No se encontró una empresa asociada a tu cuenta.'},
+            status=403,
+        )
+
+    plaza = get_object_or_404(Plaza, pk=pk, empresa=empresa)
+
+    url_ingesta = getattr(settings, 'FABRIC_INGEST_URL', '')
+    if not url_ingesta:
+        return JsonResponse(
+            {
+                'error': (
+                    'Falta configurar FABRIC_INGEST_URL en el servidor '
+                    'para enviar datos a Microsoft Fabric.'
+                )
+            },
+            status=400,
+        )
+
+    datos = _datos_exportacion_fabric(plaza)
+    headers = {'Content-Type': 'application/json'}
+    token = getattr(settings, 'FABRIC_INGEST_TOKEN', '')
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+
+    try:
+        respuesta = requests.post(
+            url_ingesta,
+            json=datos,
+            headers=headers,
+            timeout=30,
+        )
+        respuesta.raise_for_status()
+    except Exception as exc:
+        return JsonResponse(
+            {'error': f'No se pudo enviar a Fabric: {exc}'},
+            status=502,
+        )
+
+    return JsonResponse(
+        {
+            'ok': True,
+            'mensaje': (
+                f'Se enviaron {datos.get("total_candidatos", 0)} '
+                'candidato(s) a Microsoft Fabric.'
+            ),
+        }
+    )
+
+
 
 
 def evaluacion_invitacion(request, token):
