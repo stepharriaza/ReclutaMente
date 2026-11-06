@@ -3147,6 +3147,10 @@ def empresa_invitar_participantes(request, pk):
 
         'total_completados': total_completados,
 
+        'fabric_ingest_configurado': bool(
+            getattr(settings, 'FABRIC_INGEST_URL', '')
+        ),
+
         'perfiles': _perfiles_para_formulario(),
 
         'competencias_opciones': _competencias_para_formulario(),
