@@ -1,0 +1,94 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "b1000000000000000007",
+  "position": {
+    "x": 20,
+    "y": 450,
+    "z": 6000,
+    "height": 250,
+    "width": 1240,
+    "tabOrder": 6000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "persona_nombre"
+                }
+              },
+              "queryRef": "evaluaciones.persona_nombre",
+              "nativeQueryRef": "persona_nombre"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "plaza_nombre"
+                }
+              },
+              "queryRef": "evaluaciones.plaza_nombre",
+              "nativeQueryRef": "plaza_nombre"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "Promedio puntaje IA"
+                }
+              },
+              "queryRef": "evaluaciones.Promedio puntaje IA",
+              "nativeQueryRef": "Promedio puntaje IA"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "recomendacion_ia"
+                }
+              },
+              "queryRef": "evaluaciones.recomendacion_ia",
+              "nativeQueryRef": "recomendacion_ia"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "Promedio puntaje pruebas"
+                }
+              },
+              "queryRef": "evaluaciones.Promedio puntaje pruebas",
+              "nativeQueryRef": "Promedio puntaje pruebas"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

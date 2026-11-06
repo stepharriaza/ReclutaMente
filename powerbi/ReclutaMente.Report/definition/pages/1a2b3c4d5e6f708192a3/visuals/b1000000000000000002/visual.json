@@ -1,0 +1,38 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "b1000000000000000002",
+  "position": {
+    "x": 320,
+    "y": 20,
+    "z": 1000,
+    "height": 110,
+    "width": 280,
+    "tabOrder": 1000
+  },
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {
+      "queryState": {
+        "Data": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "evaluaciones"
+                    }
+                  },
+                  "Property": "Promedio puntaje IA"
+                }
+              },
+              "queryRef": "evaluaciones.Promedio puntaje IA",
+              "nativeQueryRef": "Promedio puntaje IA"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

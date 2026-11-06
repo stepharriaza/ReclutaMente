@@ -158,11 +158,9 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700">{{ sesgo_label }}</span>
-                        {% if fabric_ingest_configurado %}
                         <a href="#fabric" class="inline-flex items-center justify-center bg-white border border-cyan-300 text-cyan-700 hover:bg-cyan-50 font-semibold px-4 py-2 rounded-xl text-xs transition">
-                            Enviar a Fabric
+                            Ver tablero
                         </a>
-                        {% endif %}
                         <button type="submit" form="eval-form" id="eval-repeat-btn" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
                             Evaluar de nuevo
                         </button>
@@ -626,6 +624,10 @@
                                 <p class="text-[11px] uppercase tracking-wider font-semibold text-indigo-500">Participante seleccionado</p>
                                 <p id="fabric-seleccionado-nombre" class="mt-1 text-lg font-bold text-gray-900">{{ tablero_fabric.candidatos.0.nombre }}</p>
                                 <p class="text-xs text-indigo-800 mt-0.5">Haz clic en un participante para cambiar los resultados al instante.</p>
+                                <p class="mt-1 text-xs text-indigo-700">
+                                    <span class="font-semibold">Sugerencia (mejor puntaje):</span>
+                                    {{ tablero_fabric.candidatos.0.nombre }}{% if tablero_fabric.candidatos.0.puntaje is not None %} · {{ tablero_fabric.candidatos.0.puntaje }} pts{% endif %}
+                                </p>
                             </div>
                             <div class="text-right">
                                 <p class="text-[11px] uppercase tracking-wider font-semibold text-indigo-500">Puntaje IA</p>
@@ -644,7 +646,7 @@
                                 {{ item.nombre }}
                                 <span class="rounded-full px-2 py-0.5 text-[11px] font-bold text-white" style="background-color: {{ item.color }};">{{ item.puntaje|default_if_none:"—" }}</span>
                                 {% if item.posicion == 1 and item.puntaje is not None %}
-                                <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">Mejor</span>
+                                <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">Sugerencia</span>
                                 {% endif %}
                             </button>
                             {% endfor %}
@@ -892,6 +894,8 @@
                         <p class="mt-1">Los resultados de esta vacante se sincronizan con Microsoft Fabric de forma automática. No necesitas exportar ni enviar datos manualmente desde esta pantalla.</p>
                     </div>
                 </div>
+                {% endif %}
+            </div>
         </div>
 
         {% if resultados_ia and candidatos_pendientes %}
@@ -1083,56 +1087,68 @@
 
 <script>
 (function () {
-    const boton = document.getElementById('fabric-send-btn');
-    if (!boton) return;
+    const selector = document.getElementById('fabric-selector');
+    if (!selector) return;
 
-    const estado = document.getElementById('fabric-send-status');
+    const nombreEl = document.getElementById('fabric-seleccionado-nombre');
+    const puntajeEl = document.getElementById('fabric-seleccionado-puntaje');
+    const paneles = Array.prototype.slice.call(
+        document.querySelectorAll('[data-panel]')
+    );
+    const botones = Array.prototype.slice.call(
+        selector.querySelectorAll('[data-candidato]')
+    );
 
-    function marcarEstado(texto, tipo) {
-        if (!estado) return;
-        estado.textContent = texto;
-        estado.className = 'mt-2 text-xs ' + (
-            tipo === 'error' ? 'text-red-600'
-            : tipo === 'ok' ? 'text-emerald-600 font-medium'
-            : 'text-gray-500'
-        );
-    }
+    function activar(boton) {
+        const id = boton.getAttribute('data-candidato');
+        const nombre = boton.getAttribute('data-nombre') || '';
+        const puntaje = boton.getAttribute('data-puntaje') || '—';
+        const color = boton.getAttribute('data-color') || '#4f46e5';
 
-    boton.addEventListener('click', async function () {
-        const url = boton.getAttribute('data-url');
-        if (!url) return;
+        if (nombreEl) nombreEl.textContent = nombre;
+        if (puntajeEl) {
+            puntajeEl.textContent = puntaje;
+            puntajeEl.style.color = color;
+        }
 
-        const confirmado = window.confirm(
-            '¿Enviar los resultados de esta vacante a Microsoft Fabric?'
-        );
-        if (!confirmado) return;
+        paneles.forEach(function (panel) {
+            panel.hidden = panel.getAttribute('data-panel') !== id;
+        });
 
-        boton.disabled = true;
-        marcarEstado('Enviando resultados a Microsoft Fabric...', 'info');
+        botones.forEach(function (otro) {
+            const activo = otro === boton;
+            otro.setAttribute('aria-pressed', activo ? 'true' : 'false');
+            otro.style.borderColor = activo ? '#6366f1' : '';
+            otro.style.backgroundColor = activo ? '#eef2ff' : '';
+            otro.style.color = activo ? '#4338ca' : '';
+            otro.style.boxShadow = activo
+                ? '0 0 0 2px rgba(99, 102, 241, 0.25)'
+                : '';
+        });
 
         try {
-            const respuesta = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF_TOKEN
-                },
-                body: '{}'
-            });
-            const datos = await respuesta.json();
-            if (!respuesta.ok) {
-                throw new Error(datos.error || 'No se pudo enviar a Fabric.');
-            }
-            marcarEstado(
-                datos.mensaje || 'Resultados enviados a Microsoft Fabric.',
-                'ok'
-            );
+            history.replaceState(null, '', '#fabric-' + id);
         } catch (error) {
-            marcarEstado('Error: ' + error.message, 'error');
-        } finally {
-            boton.disabled = false;
+            return;
         }
+    }
+
+    botones.forEach(function (boton) {
+        boton.addEventListener('click', function () {
+            activar(boton);
+        });
     });
+
+    const hash = window.location.hash.indexOf('#fabric-') === 0
+        ? window.location.hash.slice('#fabric-'.length)
+        : '';
+    const inicial = botones.find(function (boton) {
+        return hash && boton.getAttribute('data-candidato') === hash;
+    }) || botones.find(function (boton) {
+        return boton.getAttribute('data-candidato') !== 'todos';
+    }) || botones[0];
+
+    if (inicial) activar(inicial);
 })();
 </script>
 {% endblock %}
