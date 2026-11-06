@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.db import models, transaction
 
 from django.utils import timezone
@@ -777,6 +779,71 @@ def _resultado_desde_analisis(analisis):
     }
 
 
+def _analisis_guardado(intentos):
+    """Devuelve el análisis más reciente guardado para una persona.
+
+    Se buscan todos los intentos de la persona y no solo el representante,
+    para que una evaluación antigua no desaparezca si el candidato resuelve
+    una prueba nueva y cambia el intento más reciente.
+    """
+
+    ids = [intento.id for intento in intentos if intento and intento.id]
+
+    if not ids:
+        return None
+
+    return (
+        AnalisisIA.objects.filter(intento_id__in=ids)
+        .order_by('-id')
+        .first()
+    )
+
+
+def _formatear_fecha_iso(valor):
+    """Convierte una marca de tiempo ISO guardada en texto legible."""
+
+    if not valor:
+        return ''
+
+    try:
+        fecha = datetime.fromisoformat(str(valor))
+    except (TypeError, ValueError):
+        return str(valor)
+
+    if timezone.is_aware(fecha):
+        fecha = timezone.localtime(fecha)
+
+    return fecha.strftime('%d/%m/%Y %H:%M')
+
+
+def _historial_analisis(analisis):
+    """Devuelve las evaluaciones anteriores guardadas, listas para mostrar."""
+
+    if not analisis or not isinstance(analisis.perfil, dict):
+        return []
+
+    historial = []
+
+    for item in analisis.perfil.get('historial') or []:
+        if not isinstance(item, dict):
+            continue
+
+        historial.append(
+            {
+                'puntaje': item.get('puntaje'),
+                'recomendacion': item.get('recomendacion', ''),
+                'criterios': item.get('criterios', ''),
+                'sesgo': item.get('sesgo', ''),
+                'sesgo_detalle': item.get('sesgo_detalle', ''),
+                'informe': item.get('informe', ''),
+                'modelo': item.get('modelo', ''),
+                'fecha': _formatear_fecha_iso(item.get('evaluado_en')),
+            }
+        )
+
+    return historial
+
+
 FABRIC_CAMPOS_CSV = [
     'generado_en',
     'empresa_id',
@@ -815,7 +882,7 @@ def _datos_exportacion_fabric(plaza):
     candidatos = []
     for intentos in grupos:
         representante = intentos[0]
-        analisis = AnalisisIA.objects.filter(intento=representante).first()
+        analisis = _analisis_guardado(intentos)
         perfil = (
             analisis.perfil
             if analisis and isinstance(analisis.perfil, dict)
@@ -960,6 +1027,36 @@ def _guardar_analisis_ia(
 
     representante = intentos[0]
 
+    intentos_ids = [intento.id for intento in intentos]
+
+    anterior = (
+        AnalisisIA.objects.filter(intento_id__in=intentos_ids)
+        .order_by('-id')
+        .first()
+    )
+
+    historial = []
+
+    if anterior and isinstance(anterior.perfil, dict):
+        historial = [
+            item
+            for item in (anterior.perfil.get('historial') or [])
+            if isinstance(item, dict)
+        ]
+        historial.append(
+            {
+                'evaluado_en': anterior.perfil.get('evaluado_en'),
+                'puntaje': anterior.perfil.get('puntaje'),
+                'recomendacion': anterior.perfil.get('recomendacion', ''),
+                'criterios': anterior.perfil.get('criterios', ''),
+                'sesgo': anterior.perfil.get('sesgo', ''),
+                'sesgo_detalle': anterior.perfil.get('sesgo_detalle', ''),
+                'informe': anterior.informe_texto or '',
+                'modelo': anterior.modelo_usado or '',
+            }
+        )
+        historial = historial[-5:]
+
     perfil = {
 
         'criterios': criterios,
@@ -987,6 +1084,8 @@ def _guardar_analisis_ia(
         'plaza_id': plaza.id,
 
         'evaluado_en': timezone.now().isoformat(),
+
+        'historial': historial,
 
     }
 
@@ -3081,6 +3180,28 @@ def empresa_evaluar_participantes_ia(request, pk):
 
     seleccion_guardada = _seleccion_ia_guardada(request, plaza)
 
+    if not seleccion_guardada:
+
+        analisis_previo = (
+            AnalisisIA.objects.filter(
+                intento__postulacion__convocatoria__plaza=plaza
+            )
+            .order_by('-id')
+            .first()
+        )
+
+        if analisis_previo and isinstance(analisis_previo.perfil, dict):
+
+            perfil_previo = analisis_previo.perfil
+
+            seleccion_guardada = {
+                'perfil_objetivo': perfil_previo.get('perfil_objetivo', ''),
+                'competencias': perfil_previo.get('competencias') or [],
+                'sesgo': perfil_previo.get('sesgo', 'equilibrado'),
+                'sesgo_detalle': perfil_previo.get('sesgo_detalle', ''),
+                'criterios_texto': perfil_previo.get('criterios', ''),
+            }
+
 
 
     if request.method == 'POST':
@@ -3287,6 +3408,8 @@ def empresa_evaluar_participantes_ia(request, pk):
 
                         'analisis': analisis,
 
+                        'historial': _historial_analisis(analisis),
+
                         'sesgo': sesgo,
 
                         'sesgo_detalle': sesgo_detalle,
@@ -3335,7 +3458,7 @@ def empresa_evaluar_participantes_ia(request, pk):
 
         representante = intentos[0]
 
-        analisis = AnalisisIA.objects.filter(intento=representante).first()
+        analisis = _analisis_guardado(intentos)
 
         perfil_guardado = (
 
@@ -3357,6 +3480,8 @@ def empresa_evaluar_participantes_ia(request, pk):
 
                 'analisis': analisis,
 
+                'historial': _historial_analisis(analisis),
+
                 'nivel': _nivel_puntaje(perfil_guardado.get('puntaje')),
 
                 'barras_dimensiones': _barras_dimensiones(intentos),
@@ -3367,57 +3492,63 @@ def empresa_evaluar_participantes_ia(request, pk):
 
 
 
-    if not resultados_ia:
+    evaluados_ids = {item['persona'].id for item in resultados_ia}
 
-        for candidato in candidatos:
+    for candidato in candidatos:
 
-            analisis = candidato['analisis']
+        if candidato['persona'].id in evaluados_ids:
 
-            if not analisis:
+            continue
 
-                continue
+        analisis = candidato['analisis']
+
+        if not analisis:
+
+            continue
 
 
 
-            intentos = candidato['intentos']
+        intentos = candidato['intentos']
 
-            intentos_por_id = {intento.id: intento for intento in intentos}
+        intentos_por_id = {intento.id: intento for intento in intentos}
 
-            resultado = _resultado_desde_analisis(analisis)
+        resultado = _resultado_desde_analisis(analisis)
 
-            pruebas_detalle = [
+        pruebas_detalle = [
 
-                {
+            {
 
-                    'resultado': prueba,
+                'resultado': prueba,
 
-                    'intento': intentos_por_id.get(prueba.get('intento_id')),
+                'intento': intentos_por_id.get(prueba.get('intento_id')),
 
-                }
+            }
 
-                for prueba in resultado.get('pruebas') or []
+            for prueba in resultado.get('pruebas') or []
 
-            ]
+        ]
 
-            resultados_ia.append(
+        resultados_ia.append(
 
-                {
+            {
 
-                    'persona': candidato['persona'],
+                'persona': candidato['persona'],
 
-                    'intentos': intentos,
+                'intentos': intentos,
 
-                    'resultado': resultado,
+                'resultado': resultado,
 
-                    'analisis': analisis,
+                'analisis': analisis,
 
-                    'pruebas_detalle': pruebas_detalle,
+                'historial': candidato['historial'],
 
-                }
+                'pruebas_detalle': pruebas_detalle,
 
-            )
+            }
 
-        _decorar_resultados_ia(resultados_ia)
+        )
+
+    _decorar_resultados_ia(resultados_ia)
 
 
 
