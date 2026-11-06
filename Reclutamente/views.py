@@ -3206,6 +3206,16 @@ def empresa_invitar_participantes(request, pk):
 
     seleccion_ia = _seleccion_ia_guardada(request, plaza)
 
+    total_completados = (
+        Intento.objects.filter(
+            postulacion__convocatoria__plaza=plaza,
+            estado=EstadoIntento.COMPLETADO,
+        )
+        .values('persona_id')
+        .distinct()
+        .count()
+    )
+
     context = {
 
         'plaza': plaza,
@@ -3216,6 +3226,12 @@ def empresa_invitar_participantes(request, pk):
         'invitaciones': invitaciones,
 
         'resultados': resultados,
+
+        'total_completados': total_completados,
+
+        'fabric_ingest_configurado': bool(
+            getattr(settings, 'FABRIC_INGEST_URL', '')
+        ),
 
         'perfiles': _perfiles_para_formulario(),
 

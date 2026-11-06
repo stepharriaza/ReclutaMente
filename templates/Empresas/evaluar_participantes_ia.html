@@ -107,7 +107,7 @@
                 <p class="mt-3 text-xs text-gray-500">Enfoque de calificación: <span id="sesgo-preview" class="font-semibold text-gray-700">{{ sesgo_label }}</span></p>
             </div>
 
-            <form method="post" class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <form method="post" id="eval-form" class="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 {% csrf_token %}
                 <input type="hidden" name="perfil_objetivo" value="{{ perfil_objetivo }}">
                 {% for competencia in competencias_seleccionadas %}
@@ -156,7 +156,17 @@
                         <h2 class="text-lg font-bold text-gray-900">Ranking de candidatos</h2>
                         <p class="text-sm text-gray-500 mt-1">Resultados guardados: se mantienen disponibles cada vez que vuelvas a esta vacante.</p>
                     </div>
-                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700">{{ sesgo_label }}</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700">{{ sesgo_label }}</span>
+                        {% if fabric_ingest_configurado %}
+                        <a href="#fabric" class="inline-flex items-center justify-center bg-white border border-cyan-300 text-cyan-700 hover:bg-cyan-50 font-semibold px-4 py-2 rounded-xl text-xs transition">
+                            Enviar a Fabric
+                        </a>
+                        {% endif %}
+                        <button type="submit" form="eval-form" id="eval-repeat-btn" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
+                            Evaluar de nuevo
+                        </button>
+                    </div>
                 </div>
                 <details class="mt-3">
                     <summary class="cursor-pointer text-xs font-medium text-indigo-600">Ver criterios usados</summary>
@@ -569,6 +579,8 @@
                     </div>
                     {% if fabric_embed_url %}
                     <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">Tablero conectado</span>
+                    {% elif fabric_ingest_configurado %}
+                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">Envío habilitado</span>
                     {% else %}
                     <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/30">Pendiente de configurar</span>
                     {% endif %}
@@ -619,7 +631,8 @@
                         <button type="button" id="fabric-send-btn" data-url="{% url 'empresa_enviar_evaluacion_fabric' plaza.id %}" class="mt-3 inline-flex items-center justify-center bg-cyan-700 hover:bg-cyan-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg text-xs transition">
                             Enviar a Fabric
                         </button>
-                        <p id="fabric-send-status" class="mt-2 text-xs text-gray-500"></p>
+                        <p id="fabric-send-status" class="mt-2 text-xs text-gray-500" role="status" aria-live="polite"></p>
+                        <p class="mt-2 text-[11px] text-gray-400">Se enviarán los resultados actuales de esta vacante al flujo de Power Automate / Fabric.</p>
                         {% else %}
                         <p class="mt-1 text-sm text-gray-600">Configura <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">FABRIC_INGEST_URL</code> para habilitar el envío automático a Fabric.</p>
                         <span class="mt-3 inline-flex items-center justify-center bg-gray-100 text-gray-400 font-semibold px-4 py-2 rounded-lg text-xs cursor-not-allowed">Enviar a Fabric</span>
@@ -682,6 +695,7 @@
     const criteriosPreviewEl = document.getElementById('criterios-preview');
     const sesgoPreviewEl = document.getElementById('sesgo-preview');
     const submitBtn = document.getElementById('eval-submit-btn');
+    const repeatBtn = document.getElementById('eval-repeat-btn');
     const totalCandidatos = submitBtn
         ? parseInt(submitBtn.getAttribute('data-total-candidatos') || '0', 10)
         : 0;
@@ -735,7 +749,9 @@
     function actualizarBotonEvaluar() {
         if (!submitBtn) return;
         const tieneCriterios = criteriosEl && criteriosEl.value.trim().length > 0;
-        submitBtn.disabled = !tieneCriterios || totalCandidatos === 0;
+        const habilitado = tieneCriterios && totalCandidatos > 0;
+        submitBtn.disabled = !habilitado;
+        if (repeatBtn) repeatBtn.disabled = !habilitado;
     }
 
     actualizarBotonEvaluar();
@@ -838,12 +854,27 @@
 
     const estado = document.getElementById('fabric-send-status');
 
+    function marcarEstado(texto, tipo) {
+        if (!estado) return;
+        estado.textContent = texto;
+        estado.className = 'mt-2 text-xs ' + (
+            tipo === 'error' ? 'text-red-600'
+            : tipo === 'ok' ? 'text-emerald-600 font-medium'
+            : 'text-gray-500'
+        );
+    }
+
     boton.addEventListener('click', async function () {
         const url = boton.getAttribute('data-url');
         if (!url) return;
 
+        const confirmado = window.confirm(
+            '¿Enviar los resultados de esta vacante a Microsoft Fabric?'
+        );
+        if (!confirmado) return;
+
         boton.disabled = true;
-        if (estado) estado.textContent = 'Enviando resultados a Microsoft Fabric...';
+        marcarEstado('Enviando resultados a Microsoft Fabric...', 'info');
 
         try {
             const respuesta = await fetch(url, {
@@ -858,11 +889,12 @@
             if (!respuesta.ok) {
                 throw new Error(datos.error || 'No se pudo enviar a Fabric.');
             }
-            if (estado) {
-                estado.textContent = datos.mensaje || 'Resultados enviados a Microsoft Fabric.';
-            }
+            marcarEstado(
+                datos.mensaje || 'Resultados enviados a Microsoft Fabric.',
+                'ok'
+            );
         } catch (error) {
-            if (estado) estado.textContent = 'Error: ' + error.message;
+            marcarEstado('Error: ' + error.message, 'error');
         } finally {
             boton.disabled = false;
         }
