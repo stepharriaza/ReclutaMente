@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from core import auth_views
+from core import legal_views
 from . import views
 
 urlpatterns = [
@@ -29,6 +30,12 @@ urlpatterns = [
     path('test/resolver/<int:intento_id>/', views.resolver_test, name='resolver_test'),
     path('registro/', views.registro_view, name='registro'),
     path('contacto/', views.contacto_empresas, name='contacto'),
+    path('legal/', legal_views.legal_index, name='legal_index'),
+    path('legal/aviso-legal/', legal_views.legal_aviso, name='legal_aviso'),
+    path('legal/terminos/', legal_views.legal_terminos, name='legal_terminos'),
+    path('legal/privacidad/', legal_views.legal_privacidad, name='legal_privacidad'),
+    path('legal/cookies/', legal_views.legal_cookies, name='legal_cookies'),
+    path('legal/consentimiento-datos/', legal_views.legal_consentimiento, name='legal_consentimiento'),
     path('logout/', views.logout_view, name='logout'),
     path('login/', views.login_view, name='login'),
     path(
@@ -211,6 +218,11 @@ urlpatterns = [
         'profesional/certificaciones/',
         views.profesional_certificaciones,
         name='profesional_certificaciones',
+    ),
+    path(
+        'profesional/certificaciones/<int:certificado_id>/',
+        views.profesional_certificado_detalle,
+        name='profesional_certificado_detalle',
     ),
     path(
         'profesional/certificaciones/<int:certificado_id>/pdf/',

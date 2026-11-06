@@ -30,7 +30,7 @@
 </script>
 
 <body class="bg-white text-zinc-900 antialiased flex flex-col min-h-screen">
-    {% include 'includes/navbar_superadmin.html' %}
+    {% include 'includes/navbar.html' %}
             
     <div class="bg-indigo-950 border-b border-white/10 sticky top-16 z-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -42,7 +42,7 @@
                     <a href="{% url 'superadmin_profesionales' %}" class="text-xs uppercase tracking-[0.2em] whitespace-nowrap {% if 'profesional' in request.resolver_match.url_name %}font-bold text-white border-b-2 border-indigo-400 pb-1.5{% else %}font-semibold text-indigo-200/75 hover:text-white pb-1.5{% endif %} transition">Gestión de profesionales</a>
                     <a href="{% url 'superadmin_bitacora' %}" class="text-xs uppercase tracking-[0.2em] whitespace-nowrap {% if 'bitacora' in request.resolver_match.url_name %}font-bold text-white border-b-2 border-indigo-400 pb-1.5{% else %}font-semibold text-indigo-200/75 hover:text-white pb-1.5{% endif %} transition">Bitácora</a>
                 </nav>
-            {% elif not request.path == '/' and not 'login' in request.path and not 'registro' in request.path %}
+            {% elif not request.path == '/' and not 'login' in request.path and not 'registro' in request.path and not 'legal' in request.path %}
                 <nav class="flex items-center space-x-8 py-3.5 overflow-x-auto">
                     <a href="{% url 'empresa_dashboard' %}" class="text-xs uppercase tracking-[0.2em] whitespace-nowrap {% if request.resolver_match.url_name == 'empresa_dashboard' %}font-bold text-white border-b-2 border-indigo-400 pb-1.5{% else %}font-semibold text-indigo-200/75 hover:text-white pb-1.5{% endif %} transition">Dashboard general</a>
                     <a href="{% url 'empresa_vacantes' %}" class="text-xs uppercase tracking-[0.2em] whitespace-nowrap {% if request.resolver_match.url_name == 'empresa_vacantes' or request.resolver_match.url_name == 'crear_vacante' %}font-bold text-white border-b-2 border-indigo-400 pb-1.5{% else %}font-semibold text-indigo-200/75 hover:text-white pb-1.5{% endif %} transition">Catálogo de plazas</a>

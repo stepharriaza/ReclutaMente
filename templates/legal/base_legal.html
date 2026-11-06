@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title|default:"Legal" }} - ReclutaMente{% endblock %}
+{% block content %}
+<section class="bg-zinc-50 min-h-[calc(100vh-4rem)]">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div class="grid gap-8 lg:grid-cols-[260px_1fr]">
+            <aside class="hidden lg:block">
+                <nav class="sticky top-24 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Documentos legales</p>
+                    <ul class="mt-4 space-y-2 text-sm">
+                        <li><a href="{% url 'legal_index' %}" class="block rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100 hover:text-indigo-700 transition">Centro legal</a></li>
+                        <li><a href="{% url 'legal_aviso' %}" class="block rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100 hover:text-indigo-700 transition">Aviso Legal</a></li>
+                        <li><a href="{% url 'legal_terminos' %}" class="block rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100 hover:text-indigo-700 transition">Términos y Condiciones</a></li>
+                        <li><a href="{% url 'legal_privacidad' %}" class="block rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100 hover:text-indigo-700 transition">Política de Privacidad</a></li>
+                        <li><a href="{% url 'legal_cookies' %}" class="block rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100 hover:text-indigo-700 transition">Política de Cookies</a></li>
+                        <li><a href="{% url 'legal_consentimiento' %}" class="block rounded-lg px-3 py-2 text-zinc-700 hover:bg-zinc-100 hover:text-indigo-700 transition">Consentimiento de datos</a></li>
+                    </ul>
+                </nav>
+            </aside>
+            <main class="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm sm:p-12">
+                <header class="border-b border-zinc-100 pb-6">
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-600">Documento legal</p>
+                    <h1 class="mt-2 text-3xl font-bold tracking-tight text-zinc-900">{{ page_title|default:"Legal" }}</h1>
+                    <p class="mt-2 text-sm text-zinc-500">Última actualización: 6 de noviembre de 2026 · Contacto: <a href="mailto:reeclutamente@gmail.com" class="text-indigo-600 hover:underline">reeclutamente@gmail.com</a></p>
+                </header>
+                <div class="legal-content mt-8">
+                    {% block legal_content %}{% endblock %}
+                </div>
+            </main>
+        </div>
+    </div>
+</section>
+<style>
+    .legal-content h2 { font-size: 1.25rem; font-weight: 700; color: #18181b; margin-top: 2rem; margin-bottom: .75rem; }
+    .legal-content h3 { font-size: 1.05rem; font-weight: 600; color: #27272a; margin-top: 1.25rem; margin-bottom: .5rem; }
+    .legal-content p { color: #3f3f46; line-height: 1.75; margin-bottom: 1rem; }
+    .legal-content ul, .legal-content ol { color: #3f3f46; margin: .5rem 0 1rem 1.25rem; list-style: disc; }
+    .legal-content ol { list-style: decimal; }
+    .legal-content li { margin-bottom: .35rem; line-height: 1.7; }
+    .legal-content a { color: #4f46e5; text-decoration: underline; }
+    .legal-content strong { color: #18181b; font-weight: 600; }
+</style>
+{% endblock %}

@@ -5352,6 +5352,34 @@ def profesional_certificaciones(request):
 
 
 @solo_profesional
+def profesional_certificado_detalle(request, certificado_id):
+    usuario = get_recluta_user(request)
+    if not usuario:
+        return redirect('login')
+    if not usuario.activo:
+        messages.error(request, 'Tu cuenta est\u00e1 desactivada. Contacta al administrador.')
+        return redirect('login')
+    if _get_empresa_for_user(usuario):
+        return redirect('empresa_dashboard')
+    persona = _get_persona_for_user(usuario)
+    if not persona:
+        messages.error(request, 'No tienes un perfil de profesional asociado a esta cuenta.')
+        return redirect('login')
+
+    certificado = get_object_or_404(
+        Certificado.objects.select_related(
+            'intento', 'intento__persona', 'intento__test', 'intento__test__categoria'
+        ),
+        id=certificado_id,
+        intento__persona=persona,
+    )
+    return render(request, 'Profesionales/certificado_detalle.html', {
+        'persona': persona,
+        'certificado': certificado,
+    })
+
+
+@solo_profesional
 def descargar_certificado(request, certificado_id):
     usuario = get_recluta_user(request)
     persona = _get_persona_for_user(usuario)

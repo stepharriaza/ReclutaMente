@@ -19,6 +19,13 @@
                 <span class="font-bold tracking-wide text-white">Recluta<span class="text-indigo-400">Mente</span></span>
             </div>
             <p class="text-sm">&copy; {% now "Y" %} ReclutaMente. Todos los derechos reservados.</p>
+            <div class="flex flex-wrap items-center gap-4 text-xs">
+                <a href="{% url 'legal_aviso' %}" class="hover:text-white transition">Aviso Legal</a>
+                <a href="{% url 'legal_terminos' %}" class="hover:text-white transition">Términos y Condiciones</a>
+                <a href="{% url 'legal_privacidad' %}" class="hover:text-white transition">Política de Privacidad</a>
+                <a href="{% url 'legal_cookies' %}" class="hover:text-white transition">Política de Cookies</a>
+                <a href="{% url 'legal_consentimiento' %}" class="hover:text-white transition">Consentimiento de datos</a>
+            </div>
         </div>
     </div>
 </footer>

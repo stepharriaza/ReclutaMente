@@ -68,6 +68,8 @@
         </div>
     </nav>
 
+    {% include "includes/profesional_subnav.html" %}
+
     <main>
 
         {# encabezado #}
@@ -140,21 +142,6 @@
             </div>
         </section>
 
-        {# llamada final #}
-        <section class="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-fuchsia-900 py-20 text-white">
-            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-                <div class="absolute left-1/2 top-0 h-72 w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-fuchsia-500/25 blur-3xl"></div>
-            </div>
-            <div class="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-                <h2 class="text-3xl font-extrabold tracking-tight sm:text-4xl">¿Listo para mostrar tu talento?</h2>
-                <p class="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-indigo-100/70">
-                    Completa tu perfil y mantén tus certificaciones al día para que las empresas te encuentren.
-                </p>
-                <a href="#" class="mt-8 inline-block bg-white px-7 py-3 text-sm font-bold uppercase tracking-widest text-indigo-950 transition hover:bg-indigo-100">
-                    Completar perfil
-                </a>
-            </div>
-        </section>
 
     </main>
 
@@ -210,5 +197,6 @@
     </script>
     {% endif %}
 
+    {% include "includes/footer.html" %}
 </body>
 </html>

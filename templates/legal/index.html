@@ -1,0 +1,26 @@
+{% extends "legal/base_legal.html" %}
+{% block legal_content %}
+    <p class="text-zinc-600">Documentos que regulan el uso de la plataforma ReclutaMente, el tratamiento de datos personales y las condiciones aplicables a candidatos y empresas.</p>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        <a href="{% url 'legal_aviso' %}" class="group rounded-xl border border-zinc-200 p-5 transition hover:border-indigo-400 hover:shadow-sm">
+            <h3 class="font-semibold text-zinc-900 group-hover:text-indigo-700">Aviso Legal</h3>
+            <p class="mt-1 text-sm text-zinc-600">Identificación del responsable, uso permitido y prohibido, propiedad intelectual, reporte de contenido fraudulento y jurisdicción.</p>
+        </a>
+        <a href="{% url 'legal_terminos' %}" class="group rounded-xl border border-zinc-200 p-5 transition hover:border-indigo-400 hover:shadow-sm">
+            <h3 class="font-semibold text-zinc-900 group-hover:text-indigo-700">Términos y Condiciones</h3>
+            <p class="mt-1 text-sm text-zinc-600">Condiciones de uso para candidatos y empresas, vacantes, evaluaciones, pagos y cancelaciones.</p>
+        </a>
+        <a href="{% url 'legal_privacidad' %}" class="group rounded-xl border border-zinc-200 p-5 transition hover:border-indigo-400 hover:shadow-sm">
+            <h3 class="font-semibold text-zinc-900 group-hover:text-indigo-700">Política de Privacidad</h3>
+            <p class="mt-1 text-sm text-zinc-600">Datos recopilados, finalidades, compartición, conservación, derechos y seguridad.</p>
+        </a>
+        <a href="{% url 'legal_cookies' %}" class="group rounded-xl border border-zinc-200 p-5 transition hover:border-indigo-400 hover:shadow-sm">
+            <h3 class="font-semibold text-zinc-900 group-hover:text-indigo-700">Política de Cookies</h3>
+            <p class="mt-1 text-sm text-zinc-600">Cookies utilizadas, finalidad, duración y gestión de preferencias.</p>
+        </a>
+        <a href="{% url 'legal_consentimiento' %}" class="group rounded-xl border border-zinc-200 p-5 transition hover:border-indigo-400 hover:shadow-sm sm:col-span-2">
+            <h3 class="font-semibold text-zinc-900 group-hover:text-indigo-700">Consentimiento de tratamiento de datos</h3>
+            <p class="mt-1 text-sm text-zinc-600">Consentimiento específico para candidatos y empleadores sobre el uso de sus datos profesionales.</p>
+        </a>
+    </div>
+{% endblock %}
