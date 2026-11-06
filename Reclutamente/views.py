@@ -61,7 +61,7 @@ from google import genai
 
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import csv
 import json
 import logging
@@ -948,6 +948,36 @@ FABRIC_CAMPOS_CSV = [
     'prueba_brechas_ia',
     'prueba_informe_ia',
 ]
+
+
+def _fabric_embed_se_puede_mostrar(url):
+    """Indica si la URL del tablero se puede cargar dentro de un iframe.
+
+    Los enlaces de "uso compartido" de Power BI responden con
+    ``X-Frame-Options: deny`` y una política ``frame-ancestors`` que no
+    incluye este dominio, así que el navegador los bloquea dentro de la
+    aplicación. Solo las URLs de inserción (``/view`` o ``/reportEmbed``)
+    se pueden mostrar embebidas.
+    """
+
+    if not url:
+        return False
+
+    partes = urlparse(url)
+    host = (partes.hostname or '').lower()
+    ruta = (partes.path or '').lower()
+
+    if not host:
+        return False
+
+    if host.endswith('powerbi.com') or host.endswith('fabric.microsoft.com'):
+        return (
+            ruta.startswith('/view')
+            or ruta.startswith('/reportembed')
+            or ruta.startswith('/embed')
+        )
+
+    return True
 
 
 def _datos_exportacion_fabric(plaza):
@@ -3658,6 +3688,8 @@ def empresa_evaluar_participantes_ia(request, pk):
 
 
 
+    fabric_embed_url = getattr(settings, 'FABRIC_POWERBI_EMBED_URL', '')
+
     context = {
 
         'plaza': plaza,
@@ -3693,8 +3725,9 @@ def empresa_evaluar_participantes_ia(request, pk):
         'resultados_ia': resultados_ia,
 
         'errores': errores,
-        'fabric_embed_url': getattr(
-            settings, 'FABRIC_POWERBI_EMBED_URL', ''
+        'fabric_embed_url': fabric_embed_url,
+        'fabric_embed_disponible': _fabric_embed_se_puede_mostrar(
+            fabric_embed_url
         ),
         'fabric_workspace_url': getattr(
             settings, 'FABRIC_WORKSPACE_URL', ''

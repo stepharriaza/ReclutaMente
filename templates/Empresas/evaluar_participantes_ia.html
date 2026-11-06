@@ -577,8 +577,10 @@
                             <p class="text-sm text-cyan-100 mt-1">Tablero analítico y exportación de resultados para OneLake, Data Factory y Power BI.</p>
                         </div>
                     </div>
-                    {% if fabric_embed_url %}
+                    {% if fabric_embed_disponible %}
                     <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">Tablero conectado</span>
+                    {% elif fabric_embed_url %}
+                    <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-cyan-400/15 text-cyan-200 border border-cyan-300/30">Enlace de Power BI</span>
                     {% elif fabric_ingest_configurado %}
                     <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">Envío habilitado</span>
                     {% else %}
@@ -588,7 +590,7 @@
             </div>
 
             <div class="p-6 space-y-5">
-                {% if fabric_embed_url %}
+                {% if fabric_embed_disponible %}
                 <div class="rounded-2xl border border-gray-200 overflow-hidden bg-gray-50">
                     <iframe
                         src="{{ fabric_embed_url }}"
@@ -596,6 +598,24 @@
                         class="w-full h-[620px]"
                         frameborder="0"
                         allowfullscreen="true"></iframe>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-gray-500">Tablero incrustado desde Microsoft Fabric / Power BI.</p>
+                    <a href="{{ fabric_embed_url }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center bg-white border border-gray-300 hover:border-gray-400 text-gray-700 font-semibold px-3 py-1.5 rounded-lg text-xs transition">
+                        Abrir en Power BI
+                    </a>
+                </div>
+                {% elif fabric_embed_url %}
+                <div class="rounded-2xl border border-dashed border-cyan-300 bg-cyan-50/60 p-5">
+                    <h3 class="text-sm font-bold text-cyan-900">Tu tablero está en Power BI</h3>
+                    <p class="mt-1 text-sm text-cyan-800">El enlace configurado es un enlace de uso compartido y Power BI bloquea su visualización dentro de otras webs por seguridad. Ábrelo en una pestaña nueva para ver el tablero completo.</p>
+                    <a href="{{ fabric_embed_url }}" target="_blank" rel="noopener" class="mt-4 inline-flex items-center justify-center bg-cyan-700 hover:bg-cyan-800 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                        Abrir tablero en Power BI
+                    </a>
+                    <div class="mt-4 rounded-xl bg-white/70 border border-cyan-200 p-3 text-xs text-cyan-900">
+                        <p class="font-semibold">¿Quieres verlo incrustado aquí?</p>
+                        <p class="mt-1">En Power BI abre el informe y usa <span class="font-semibold">Archivo → Insertar informe → Publicar en la web</span> (o <span class="font-semibold">Sitio web o portal</span>). Copia ese enlace de inserción y guárdalo en <code class="bg-cyan-100 px-1.5 py-0.5 rounded">FABRIC_POWERBI_EMBED_URL</code> del archivo <code class="bg-cyan-100 px-1.5 py-0.5 rounded">.env</code>; después reinicia la aplicación.</p>
+                    </div>
                 </div>
                 {% else %}
                 <div class="rounded-2xl border border-dashed border-cyan-300 bg-cyan-50/60 p-5">
