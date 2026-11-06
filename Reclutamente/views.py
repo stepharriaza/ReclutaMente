@@ -98,11 +98,14 @@ from core.services import (
 
     describir_sesgo_calificacion,
 
+    analizar_prueba_objetiva,
+    analizar_temperamento,
+    es_prueba_objetiva,
     evaluar_candidato_con_criterios_empresa,
     evaluar_candidato_estructurado,
-    analizar_temperamento,
     generar_o_modificar_prueba,
     generar_pdf_certificado,
+    resultado_objetivo_respaldo,
     resultado_temperamento_respaldo,
 
 )
@@ -560,11 +563,12 @@ def _procesar_certificacion_temperamento(request, intento):
 
     puntajes = _dimensiones_intento(intento)
     if set(puntajes) != set(('C', 'S', 'F', 'M')):
-        messages.warning(
-            request,
-            'Tus respuestas fueron guardadas, pero faltan dimensiones para '
-            'generar la certificación de temperamento.',
-        )
+        if request:
+            messages.warning(
+                request,
+                'Tus respuestas fueron guardadas, pero faltan dimensiones para '
+                'generar la certificación de temperamento.',
+            )
         return True
 
     try:
@@ -594,12 +598,12 @@ def _procesar_certificacion_temperamento(request, intento):
         )
         certificado.save()
 
-        if generado_con_ia:
+        if request and generado_con_ia:
             messages.success(
                 request,
                 '¡Prueba finalizada! Tu análisis y certificación ya están disponibles.',
             )
-        else:
+        elif request:
             messages.warning(
                 request,
                 'Tu certificación fue generada con la interpretación de respaldo '
@@ -607,13 +611,116 @@ def _procesar_certificacion_temperamento(request, intento):
             )
     except Exception:
         logger.exception('No fue posible guardar la certificación de temperamento.')
-        messages.warning(
-            request,
-            'Tus respuestas fueron guardadas, pero no se pudo generar la '
-            'certificación. Inténtalo nuevamente más tarde.',
-        )
+        if request:
+            messages.warning(
+                request,
+                'Tus respuestas fueron guardadas, pero no se pudo generar la '
+                'certificación. Inténtalo nuevamente más tarde.',
+            )
 
     return True
+
+
+def _items_prueba_objetiva(intento):
+    items = []
+    for respuesta in intento.respuestas.select_related('pregunta').order_by(
+        'pregunta__fila', 'pregunta__id'
+    ):
+        pregunta = respuesta.pregunta
+        texto = (pregunta.texto_pregunta or '').strip()
+        seleccion = (respuesta.texto_respuesta or '').strip()
+        imagen = None
+        descripcion = texto
+        if texto.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+            imagen = texto
+            descripcion = f'Figura pregunta {pregunta.fila or ""}'.strip()
+        items.append(
+            {
+                'pregunta': descripcion,
+                'respuesta': seleccion,
+                'imagen': imagen,
+            }
+        )
+    return items
+
+
+def _procesar_certificacion_objetiva(request, intento):
+    """Analiza y certifica una prueba objetiva recién completada."""
+    tipo = es_prueba_objetiva(intento.test.nombre)
+    if not tipo:
+        return False
+
+    items = _items_prueba_objetiva(intento)
+    if not items:
+        if request:
+            messages.warning(
+                request,
+                'Tus respuestas fueron guardadas, pero no se pudo generar la '
+                'certificación porque no se encontraron respuestas registradas.',
+            )
+        return True
+
+    try:
+        try:
+            resultados = analizar_prueba_objetiva(intento.test.nombre, items)
+            generado_con_ia = True
+        except Exception:
+            logger.exception('No fue posible analizar la prueba objetiva con IA.')
+            resultados = resultado_objetivo_respaldo(items)
+            generado_con_ia = False
+
+        certificado, _ = Certificado.objects.get_or_create(
+            intento=intento,
+            defaults={
+                'codigo_verificacion': (
+                    f'RM-{tipo.upper()[:3]}-{uuid.uuid4().hex[:10].upper()}'
+                ),
+            },
+        )
+        certificado.resultados = resultados
+        certificado.analisis = resultados.get('resumen', '')
+        certificado.modelo_usado = resultados.get('modelo', '')
+        certificado.pdf = reverse(
+            'descargar_certificado', args=[certificado.id]
+        )
+        certificado.save()
+
+        try:
+            puntaje = int(resultados.get('puntaje'))
+            intento.puntaje_total = puntaje
+            intento.save(update_fields=['puntaje_total'])
+        except (TypeError, ValueError):
+            pass
+
+        if request and generado_con_ia:
+            messages.success(
+                request,
+                '¡Prueba finalizada! Tu análisis y certificación ya están disponibles.',
+            )
+        elif request:
+            messages.warning(
+                request,
+                'Tu certificación fue generada con la interpretación de respaldo '
+                'de ReclutaMente porque el agente de IA no estuvo disponible.',
+            )
+    except Exception:
+        logger.exception('No fue posible guardar la certificación objetiva.')
+        if request:
+            messages.warning(
+                request,
+                'Tus respuestas fueron guardadas, pero no se pudo generar la '
+                'certificación. Inténtalo nuevamente más tarde.',
+            )
+
+    return True
+
+
+def _procesar_certificacion(request, intento):
+    if _es_prueba_temperamento(intento.test):
+        return _procesar_certificacion_temperamento(request, intento)
+    if es_prueba_objetiva(intento.test.nombre):
+        return _procesar_certificacion_objetiva(request, intento)
+    return False
 
 
 
@@ -2854,7 +2961,7 @@ def test(request, test_id):
 
 
 
-        if _procesar_certificacion_temperamento(request, intento):
+        if _procesar_certificacion(request, intento):
             return redirect('profesional_certificaciones')
 
         messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
@@ -3003,7 +3110,7 @@ def resolver_test(request, intento_id):
 
 
 
-        if _procesar_certificacion_temperamento(request, intento):
+        if _procesar_certificacion(request, intento):
             return redirect('profesional_certificaciones')
 
         messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
