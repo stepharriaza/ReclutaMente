@@ -988,6 +988,17 @@ DIMENSIONES_ETIQUETAS = {
 }
 
 
+def _barras_dimensiones_etiquetadas(intentos):
+    """Devuelve las dimensiones con su nombre legible para el tablero."""
+
+    barras = _barras_dimensiones(intentos)
+    for barra in barras:
+        barra['nombre'] = DIMENSIONES_ETIQUETAS.get(
+            barra['nombre'], barra['nombre']
+        )
+    return barras
+
+
 def _tablero_fabric(plaza):
     """Resume los resultados de la vacante para el tablero integrado."""
 
@@ -1028,20 +1039,84 @@ def _tablero_fabric(plaza):
             nombre_prueba = intento.test.nombre if intento.test else 'Prueba'
             pruebas[nombre_prueba] = pruebas.get(nombre_prueba, 0) + 1
 
+        pruebas_candidato = []
+        for prueba in perfil.get('pruebas') or []:
+            if not isinstance(prueba, dict):
+                continue
+            valor_prueba = _puntaje_numerico(prueba.get('puntaje'))
+            pruebas_candidato.append(
+                {
+                    'nombre': prueba.get('test') or 'Prueba',
+                    'puntaje': valor_prueba,
+                    'porcentaje': max(0.0, min(100.0, valor_prueba or 0)),
+                    'fortalezas': [
+                        str(texto)
+                        for texto in (prueba.get('fortalezas') or [])
+                        if texto
+                    ],
+                    'brechas': [
+                        str(texto)
+                        for texto in (prueba.get('brechas') or [])
+                        if texto
+                    ],
+                    'informe': (prueba.get('informe') or '').strip(),
+                }
+            )
+
+        if not pruebas_candidato:
+            pruebas_candidato = [
+                {
+                    'nombre': intento.test.nombre if intento.test else 'Prueba',
+                    'puntaje': _puntaje_numerico(intento.puntaje_total),
+                    'porcentaje': max(
+                        0.0,
+                        min(100.0, _puntaje_numerico(intento.puntaje_total) or 0),
+                    ),
+                    'fortalezas': [],
+                    'brechas': [],
+                    'informe': '',
+                }
+                for intento in intentos
+            ]
+
+        fecha_evaluacion = _formatear_fecha_iso(perfil.get('evaluado_en'))
+        if not fecha_evaluacion and representante.fecha:
+            fecha_evaluacion = timezone.localtime(
+                representante.fecha
+            ).strftime('%d/%m/%Y %H:%M')
+
         candidatos.append(
             {
+                'id': representante.persona.id,
                 'nombre': representante.persona.nombre,
+                'email': representante.persona.email or '',
                 'puntaje': puntaje,
                 'porcentaje': max(0.0, min(100.0, puntaje or 0)),
                 'color': nivel['color'],
                 'etiqueta': nivel['etiqueta'],
                 'recomendacion': recomendacion,
+                'fortalezas': [
+                    str(texto) for texto in (perfil.get('fortalezas') or []) if texto
+                ],
+                'brechas': [
+                    str(texto) for texto in (perfil.get('brechas') or []) if texto
+                ],
+                'informe': (analisis.informe_texto or '').strip() if analisis else '',
+                'modelo': (analisis.modelo_usado or '') if analisis else '',
+                'fecha': fecha_evaluacion,
+                'total_pruebas': len(intentos),
+                'pruebas': pruebas_candidato,
+                'dimensiones': _barras_dimensiones_etiquetadas(intentos),
+                'historial': len(_historial_analisis(analisis)),
             }
         )
 
     candidatos.sort(
         key=lambda item: (item['puntaje'] is None, -(item['puntaje'] or 0))
     )
+
+    for posicion, item in enumerate(candidatos, start=1):
+        item['posicion'] = posicion
 
     maximo_dimension = max(dimensiones.values()) if dimensiones else 0
     barras_dimensiones = [
@@ -1084,6 +1159,7 @@ def _tablero_fabric(plaza):
             round(suma_puntajes / evaluados, 1) if evaluados else None
         ),
         'candidatos': candidatos,
+        'candidato_inicial': candidatos[0]['id'] if candidatos else None,
         'dimensiones': barras_dimensiones,
         'recomendaciones': barras_recomendaciones,
         'pruebas': [
