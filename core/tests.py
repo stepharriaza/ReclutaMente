@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 from core.models import (
@@ -70,6 +70,7 @@ class ResultadoTemperamentoTest(SimpleTestCase):
         self.assertGreater(len(contenido), 2000)
 
 
+@override_settings(CERTIFICACION_ASINCRONA=False)
 class CertificacionTemperamentoFlowTest(TestCase):
     def setUp(self):
         self.usuario = Usuario.objects.create(
@@ -152,7 +153,9 @@ class CertificacionTemperamentoFlowTest(TestCase):
         self.assertTrue(certificado.pdf)
         self.assertFalse(hasattr(self.intento, 'analisis_ia'))
 
-        pagina = self.client.get(reverse('profesional_certificaciones'))
+        pagina = self.client.get(
+            reverse('profesional_certificado_detalle', args=[certificado.id])
+        )
         self.assertContains(pagina, 'Colérico')
         self.assertContains(pagina, 'Resultados por dimensión')
         self.assertContains(pagina, 'Descargar PDF')
