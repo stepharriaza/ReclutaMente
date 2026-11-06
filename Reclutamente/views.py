@@ -980,6 +980,125 @@ def _fabric_embed_se_puede_mostrar(url):
     return True
 
 
+DIMENSIONES_ETIQUETAS = {
+    'C': 'Colérico',
+    'S': 'Sanguíneo',
+    'F': 'Flemático',
+    'M': 'Melancólico',
+}
+
+
+def _tablero_fabric(plaza):
+    """Resume los resultados de la vacante para el tablero integrado."""
+
+    grupos = _intentos_completados_por_persona(plaza)
+    grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+    candidatos = []
+    evaluados = 0
+    suma_puntajes = 0
+    recomendaciones = {}
+    dimensiones = {}
+    pruebas = {}
+
+    for intentos in grupos:
+        representante = intentos[0]
+        analisis = _analisis_guardado(intentos)
+        perfil = (
+            analisis.perfil
+            if analisis and isinstance(analisis.perfil, dict)
+            else {}
+        )
+
+        puntaje = _puntaje_numerico(perfil.get('puntaje'))
+        recomendacion = (perfil.get('recomendacion') or 'Sin evaluación').strip()
+        nivel = _nivel_puntaje(puntaje)
+
+        if puntaje is not None:
+            evaluados += 1
+            suma_puntajes += puntaje
+
+        recomendaciones[recomendacion] = (
+            recomendaciones.get(recomendacion, 0) + 1
+        )
+
+        for intento in intentos:
+            for nombre, valor in _dimensiones_intento(intento).items():
+                dimensiones[nombre] = dimensiones.get(nombre, 0) + valor
+            nombre_prueba = intento.test.nombre if intento.test else 'Prueba'
+            pruebas[nombre_prueba] = pruebas.get(nombre_prueba, 0) + 1
+
+        candidatos.append(
+            {
+                'nombre': representante.persona.nombre,
+                'puntaje': puntaje,
+                'porcentaje': max(0.0, min(100.0, puntaje or 0)),
+                'color': nivel['color'],
+                'etiqueta': nivel['etiqueta'],
+                'recomendacion': recomendacion,
+            }
+        )
+
+    candidatos.sort(
+        key=lambda item: (item['puntaje'] is None, -(item['puntaje'] or 0))
+    )
+
+    maximo_dimension = max(dimensiones.values()) if dimensiones else 0
+    barras_dimensiones = [
+        {
+            'nombre': DIMENSIONES_ETIQUETAS.get(nombre, nombre),
+            'valor': round(valor, 1),
+            'porcentaje': (
+                round((valor / maximo_dimension) * 100, 1)
+                if maximo_dimension
+                else 0
+            ),
+        }
+        for nombre, valor in sorted(
+            dimensiones.items(), key=lambda elemento: elemento[1], reverse=True
+        )
+    ]
+
+    total_grupos = len(grupos) or 1
+    colores_recomendacion = {
+        'Apto': '#10b981',
+        'En revisión': '#f59e0b',
+        'No apto': '#ef4444',
+    }
+    barras_recomendaciones = [
+        {
+            'etiqueta': etiqueta,
+            'cantidad': cantidad,
+            'porcentaje': round((cantidad / total_grupos) * 100, 1),
+            'color': colores_recomendacion.get(etiqueta, '#6366f1'),
+        }
+        for etiqueta, cantidad in sorted(
+            recomendaciones.items(), key=lambda elemento: -elemento[1]
+        )
+    ]
+
+    return {
+        'total_candidatos': len(grupos),
+        'total_evaluados': evaluados,
+        'promedio': (
+            round(suma_puntajes / evaluados, 1) if evaluados else None
+        ),
+        'candidatos': candidatos,
+        'dimensiones': barras_dimensiones,
+        'recomendaciones': barras_recomendaciones,
+        'pruebas': [
+            {'nombre': nombre, 'cantidad': cantidad}
+            for nombre, cantidad in sorted(
+                pruebas.items(), key=lambda elemento: -elemento[1]
+            )
+        ],
+        'total_intentos': sum(pruebas.values()),
+        'actualizado_en': timezone.localtime(timezone.now()).strftime(
+            '%d/%m/%Y %H:%M'
+        ),
+    }
+
+
 def _datos_exportacion_fabric(plaza):
     """Arma el conjunto de resultados de una vacante para Microsoft Fabric."""
     grupos = _intentos_completados_por_persona(plaza)
@@ -3729,6 +3848,7 @@ def empresa_evaluar_participantes_ia(request, pk):
         'fabric_embed_disponible': _fabric_embed_se_puede_mostrar(
             fabric_embed_url
         ),
+        'tablero_fabric': _tablero_fabric(plaza),
         'fabric_workspace_url': getattr(
             settings, 'FABRIC_WORKSPACE_URL', ''
         ),
