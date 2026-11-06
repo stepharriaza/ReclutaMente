@@ -28,6 +28,7 @@ urlpatterns = [
     path('test/iniciar/<int:test_id>/', views.iniciar_intento, name='iniciar_intento'),
     path('test/resolver/<int:intento_id>/', views.resolver_test, name='resolver_test'),
     path('registro/', views.registro_view, name='registro'),
+    path('contacto/', views.contacto_empresas, name='contacto'),
     path('logout/', views.logout_view, name='logout'),
     path('login/', views.login_view, name='login'),
     path(
@@ -210,6 +211,11 @@ urlpatterns = [
         'profesional/certificaciones/',
         views.profesional_certificaciones,
         name='profesional_certificaciones',
+    ),
+    path(
+        'profesional/certificaciones/<int:certificado_id>/pdf/',
+        views.descargar_certificado,
+        name='descargar_certificado',
     ),
     # --- Agente de IA ---
     path('api/agente-ia/', views.api_agente_ia, name='api_agente_ia'),

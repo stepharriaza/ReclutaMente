@@ -100,48 +100,136 @@
             </div>
         </section>
 
+        {% if messages %}
+        <div class="mx-auto max-w-5xl px-4 pt-8 sm:px-6 lg:px-8" aria-live="polite">
+            {% for message in messages %}
+            <div class="mb-3 flex items-start gap-3 rounded-lg border px-5 py-4 text-sm font-semibold leading-relaxed
+                {% if 'success' in message.tags %}border-emerald-200 bg-emerald-50 text-emerald-900
+                {% elif 'error' in message.tags %}border-red-200 bg-red-50 text-red-900
+                {% elif 'warning' in message.tags %}border-amber-200 bg-amber-50 text-amber-900
+                {% else %}border-indigo-200 bg-indigo-50 text-indigo-900{% endif %}">
+                <span class="mt-0.5" aria-hidden="true">
+                    {% if 'success' in message.tags %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M20 6 9 17l-5-5"/></svg>
+                    {% else %}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    {% endif %}
+                </span>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {# certificaciones disponibles #}
         <section class="border-t border-gray-200 bg-white py-20">
             <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
                 <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-600">Certificados obtenidos</p>
                 <h2 class="mt-4 text-3xl font-extrabold tracking-tight text-zinc-900 sm:text-4xl">Certificaciones</h2>
+                <p class="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-500">Las interpretaciones son orientativas para tu autoconocimiento y desarrollo; no constituyen diagnósticos clínicos.</p>
 
                 {% if certificaciones %}
                     <div class="mt-12 grid gap-6 md:grid-cols-2">
                         {% for cert in certificaciones %}
-                        <div class="flex flex-col rounded-lg border border-gray-200 bg-white p-8 transition hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-100">
-                            <div class="flex items-center justify-between">
-                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">{{ forloop.counter|stringformat:"02d" }}</p>
-                                <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50/60 text-emerald-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
-                                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                                        <polyline points="14 2 14 8 20 8"/>
-                                        <path d="M9 15l2 2 4-4"/>
-                                    </svg>
+                        <article class="flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100/70">
+                            <div class="h-1.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-fuchsia-500"></div>
+                            <div class="flex flex-1 flex-col p-7 sm:p-8">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-600">Certificación {{ forloop.counter|stringformat:"02d" }}</p>
+                                        <h3 class="mt-3 text-xl font-bold text-zinc-900">{{ cert.intento.test.nombre }}</h3>
+                                        <p class="mt-1 text-sm text-zinc-500">{{ cert.intento.test.categoria.nombre|default:"Sin categoría" }}</p>
+                                    </div>
+                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600" title="Prueba completada">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                            <path d="M9 15l2 2 4-4"/>
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                {% if cert.resultados.tipo == "temperamentos" %}
+                                <div class="mt-6 rounded-lg border border-indigo-100 bg-indigo-50/70 p-5">
+                                    <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-indigo-500">Temperamento predominante</p>
+                                    <p class="mt-2 text-2xl font-extrabold tracking-tight text-indigo-950">{{ cert.resultados.temperamento_predominante }}</p>
+                                    {% if cert.resultados.temperamento_secundario %}
+                                    <p class="mt-2 text-sm text-indigo-800">Tendencia complementaria: <span class="font-bold">{{ cert.resultados.temperamento_secundario }}</span></p>
+                                    {% else %}
+                                    <p class="mt-2 text-sm font-semibold text-indigo-800">Perfil combinado</p>
+                                    {% endif %}
+                                </div>
+
+                                <p class="mt-5 text-sm leading-7 text-zinc-600">{{ cert.resultados.resumen }}</p>
+
+                                <div class="mt-6">
+                                    <div class="flex items-center justify-between gap-4">
+                                        <h4 class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-700">Resultados por dimensión</h4>
+                                        <span class="text-[11px] font-medium text-zinc-400">Puntaje máximo: 48</span>
+                                    </div>
+                                    <div class="mt-4 space-y-4">
+                                        {% for dimension in cert.resultados.dimensiones %}
+                                        <div>
+                                            <div class="flex items-center justify-between gap-4 text-sm">
+                                                <span class="font-semibold text-zinc-700">{{ dimension.nombre }}</span>
+                                                <span class="font-bold text-indigo-700">{{ dimension.puntaje }} / {{ dimension.maximo }}</span>
+                                            </div>
+                                            <div class="mt-2 h-2 overflow-hidden rounded-full bg-indigo-100" role="img" aria-label="{{ dimension.nombre }}: {{ dimension.puntaje }} de {{ dimension.maximo }}">
+                                                <div class="h-full rounded-full bg-gradient-to-r from-indigo-600 to-fuchsia-500" style="width: {{ dimension.porcentaje }}%;"></div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <details class="group mt-6 rounded-lg border border-gray-200 bg-zinc-50/70 open:bg-white">
+                                    <summary class="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-bold text-zinc-700 transition hover:text-indigo-700">
+                                        Ver fortalezas y áreas de desarrollo
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 transition group-open:rotate-180"><path d="m6 9 6 6 6-6"/></svg>
+                                    </summary>
+                                    <div class="grid gap-6 border-t border-gray-200 px-5 py-5 sm:grid-cols-2">
+                                        <div>
+                                            <h4 class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Fortalezas</h4>
+                                            <ul class="mt-3 space-y-2 text-sm leading-6 text-zinc-600">
+                                                {% for fortaleza in cert.resultados.fortalezas %}
+                                                <li class="flex gap-2"><span class="font-bold text-emerald-600">•</span><span>{{ fortaleza }}</span></li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-xs font-bold uppercase tracking-[0.18em] text-indigo-700">Áreas de desarrollo</h4>
+                                            <ul class="mt-3 space-y-2 text-sm leading-6 text-zinc-600">
+                                                {% for area in cert.resultados.areas_desarrollo %}
+                                                <li class="flex gap-2"><span class="font-bold text-indigo-500">•</span><span>{{ area }}</span></li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </details>
+                                {% endif %}
+
+                                <div class="mt-6 space-y-1.5 border-t border-gray-100 pt-5 text-xs text-zinc-500">
+                                    <p class="break-all"><span class="font-semibold text-zinc-700">Código:</span> {{ cert.codigo_verificacion }}</p>
+                                    <p><span class="font-semibold text-zinc-700">Emitido:</span> {{ cert.fecha_emision|date:"d/m/Y" }}</p>
+                                    {% if cert.resultados.fuente == "ia" %}
+                                    <p><span class="font-semibold text-zinc-700">Análisis:</span> Agente de IA de ReclutaMente</p>
+                                    {% elif cert.resultados.tipo == "temperamentos" %}
+                                    <p><span class="font-semibold text-zinc-700">Análisis:</span> Guía de interpretación ReclutaMente</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="mt-auto pt-7">
+                                    {% if cert.pdf %}
+                                    <a href="{% url 'descargar_certificado' cert.id %}" download class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 sm:w-auto">
+                                        Descargar PDF
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                                    </a>
+                                    {% else %}
+                                    <span class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-zinc-50 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-zinc-400">PDF no disponible</span>
+                                    {% endif %}
                                 </div>
                             </div>
-                            <h3 class="mt-6 text-xl font-bold text-zinc-900">{{ cert.intento.test.nombre }}</h3>
-                            <p class="mt-2 text-sm leading-relaxed text-zinc-600">
-                                {{ cert.intento.test.categoria.nombre|default:"Sin categoría" }}
-                            </p>
-                            <div class="mt-4 space-y-1 text-sm text-zinc-500">
-                                <p><span class="font-semibold text-zinc-700">Código:</span> {{ cert.codigo_verificacion }}</p>
-                                <p><span class="font-semibold text-zinc-700">Emitido:</span> {{ cert.fecha_emision|date:"d/m/Y" }}</p>
-                                <p><span class="font-semibold text-zinc-700">Puntaje:</span> {{ cert.intento.puntaje_total|default:"N/A" }}</p>
-                            </div>
-                            <div class="mt-8 flex flex-wrap items-center gap-3">
-                                {% if cert.pdf %}
-                                <a href="{{ cert.pdf }}" target="_blank" class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-widest text-indigo-600 transition hover:bg-indigo-600 hover:text-white">
-                                    Descargar PDF
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                                </a>
-                                {% else %}
-                                <span class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-zinc-50 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-zinc-400">
-                                    PDF no disponible
-                                </span>
-                                {% endif %}
-                            </div>
-                        </div>
+                        </article>
                         {% endfor %}
                     </div>
                 {% else %}

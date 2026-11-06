@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacto para Empresas | ReclutaMente</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-white text-zinc-900 antialiased flex flex-col min-h-screen">
+
+    {# nav #}
+    <nav id="navbar" class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/90 backdrop-blur-lg transition">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'home' %}" class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white" title="Logo ReclutaMente">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+                                <path d="M12 4a2 2 0 0 1 2 2v.5a3.5 3.5 0 0 1 7 1.5c0 .9-.34 1.66-.9 2.3A4 4 0 0 1 15 14a2 2 0 0 0 2 2 3.5 3.5 0 0 1 3.5 3.5A4.5 4.5 0 0 1 12 21a4.5 4.5 0 0 1-8.5-1.5A3.5 3.5 0 0 1 7 16a2 2 0 0 0 2-2 4 4 0 0 1-5.1-3.7c-.56-.64-.9-1.4-.9-2.3A3.5 3.5 0 0 1 10 6.5V6a2 2 0 0 1 2-2Z"/>
+                            </svg>
+                        </div>
+                        <span class="text-lg font-bold tracking-wide text-white">
+                            Recluta<span class="text-indigo-400">Mente</span>
+                        </span>
+                    </a>
+                    <a href="{% url 'home' %}" class="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                        Regresar
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <a href="{% url 'login' %}" class="text-sm font-semibold uppercase tracking-widest text-zinc-300 transition hover:text-white">Iniciar Sesión</a>
+                    <a href="{% url 'registro' %}" class="bg-white px-5 py-2 text-sm font-bold uppercase tracking-widest text-zinc-950 transition hover:bg-zinc-200">Registrarse</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1">
+
+        {# encabezado #}
+        <section class="relative overflow-hidden bg-indigo-950 text-white">
+            <div aria-hidden="true" class="pointer-events-none absolute inset-0">
+                <div class="absolute -left-32 top-0 h-[26rem] w-[26rem] rounded-full bg-fuchsia-500/25 blur-3xl"></div>
+                <div class="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-indigo-400/25 blur-3xl"></div>
+                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.06) 1px, transparent 0); background-size: 32px 32px;"></div>
+            </div>
+
+            <div class="relative mx-auto max-w-5xl px-4 py-20 sm:px-6 lg:px-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-300">Soluciones para empresas</p>
+                <h1 class="mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl">
+                    Contáctanos para impulsar tu reclutamiento
+                </h1>
+                <p class="mt-5 max-w-2xl text-lg leading-relaxed text-indigo-200/70">
+                    ¿Tu organización busca evaluar candidatos con pruebas psicométricas e inteligencia artificial? Déjanos tus datos y un administrador habilitará tu cuenta corporativa.
+                </p>
+            </div>
+        </section>
+
+        {# formulario de contacto corporativo #}
+        <section class="border-t border-gray-200 bg-white py-20">
+            <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mb-8 rounded-lg p-4 text-sm font-medium {% if message.tags == 'success' %}border border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border border-red-200 bg-red-50 text-red-700{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="mb-10">
+                    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-600">Formulario corporativo</p>
+                    <h2 class="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900">Datos de contacto de la empresa</h2>
+                    <p class="mt-3 text-base leading-relaxed text-zinc-600">
+                        Completa la siguiente información para que nuestro equipo de administración se ponga en contacto contigo.
+                    </p>
+                </div>
+
+                <div class="rounded-xl border border-gray-200 bg-white p-8 shadow-sm sm:p-10">
+                    <form method="POST" action="{% url 'contacto' %}" class="space-y-6">
+                        {% csrf_token %}
+
+                        <div>
+                            <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                                Nombre de la empresa
+                            </label>
+                            <input
+                                type="text"
+                                name="nombre_empresa"
+                                value="{{ datos.nombre_empresa }}"
+                                required
+                                placeholder="Ej. Corporación Tecnológica S.A."
+                                class="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            >
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                            <div>
+                                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                                    Correo electrónico
+                                </label>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value="{{ datos.email }}"
+                                    required
+                                    placeholder="contacto@empresa.com"
+                                    class="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                                    Teléfono
+                                </label>
+                                <input
+                                    type="tel"
+                                    name="telefono"
+                                    value="{{ datos.telefono }}"
+                                    required
+                                    placeholder="Ej. +502 2456-7890"
+                                    class="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                >
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                                Razón por la que nos contacta
+                            </label>
+                            <textarea
+                                name="razon"
+                                rows="5"
+                                required
+                                placeholder="Cuéntanos sobre las necesidades de evaluación o contratación de tu empresa..."
+                                class="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder-zinc-400 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            >{{ datos.razon }}</textarea>
+                        </div>
+
+                        <div class="flex items-center justify-between border-t border-gray-200 pt-6">
+                            <a href="{% url 'home' %}" class="text-xs font-semibold uppercase tracking-widest text-zinc-500 transition hover:text-zinc-900">
+                                Cancelar
+                            </a>
+                            <button
+                                type="submit"
+                                class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-7 py-3.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700"
+                            >
+                                <span>Enviar solicitud</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    {% include "includes/footer.html" %}
+
+</body>
+</html>

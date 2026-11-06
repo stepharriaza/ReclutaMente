@@ -283,6 +283,9 @@ class Certificado(models.Model):
     codigo_verificacion = models.CharField(max_length=100, unique=True)
     fecha_emision = models.DateField(auto_now_add=True)
     pdf = models.CharField(max_length=500, blank=True)
+    resultados = models.JSONField(default=dict, blank=True)
+    analisis = models.TextField(blank=True)
+    modelo_usado = models.CharField(max_length=100, blank=True)
     intento = models.OneToOneField(Intento, on_delete=models.CASCADE, related_name="certificado")
 
     def __str__(self):

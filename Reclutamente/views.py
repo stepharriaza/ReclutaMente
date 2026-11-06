@@ -64,6 +64,9 @@ from django.http import HttpResponse, JsonResponse
 from urllib.parse import quote
 import csv
 import json
+import logging
+import unicodedata
+import uuid
 
 import io
 
@@ -97,7 +100,10 @@ from core.services import (
 
     evaluar_candidato_con_criterios_empresa,
     evaluar_candidato_estructurado,
+    analizar_temperamento,
     generar_o_modificar_prueba,
+    generar_pdf_certificado,
+    resultado_temperamento_respaldo,
 
 )
 
@@ -125,6 +131,8 @@ from core.auth_utils import (
 
 )
 
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -538,6 +546,74 @@ def _dimensiones_intento(intento):
 
     return dimensiones
 
+
+def _es_prueba_temperamento(test_obj):
+    nombre = unicodedata.normalize('NFKD', test_obj.nombre or '')
+    nombre = ''.join(letra for letra in nombre if not unicodedata.combining(letra))
+    return 'temperamento' in nombre.lower()
+
+
+def _procesar_certificacion_temperamento(request, intento):
+    """Analiza y certifica un intento de temperamento recién completado."""
+    if not _es_prueba_temperamento(intento.test):
+        return False
+
+    puntajes = _dimensiones_intento(intento)
+    if set(puntajes) != set(('C', 'S', 'F', 'M')):
+        messages.warning(
+            request,
+            'Tus respuestas fueron guardadas, pero faltan dimensiones para '
+            'generar la certificación de temperamento.',
+        )
+        return True
+
+    try:
+        try:
+            resultados = analizar_temperamento(
+                _construir_evidencia_candidato([intento]), puntajes
+            )
+            generado_con_ia = True
+        except Exception:
+            logger.exception('No fue posible analizar el temperamento con IA.')
+            resultados = resultado_temperamento_respaldo(puntajes)
+            generado_con_ia = False
+
+        certificado, _ = Certificado.objects.get_or_create(
+            intento=intento,
+            defaults={
+                'codigo_verificacion': (
+                    f'RM-TEM-{uuid.uuid4().hex[:12].upper()}'
+                ),
+            },
+        )
+        certificado.resultados = resultados
+        certificado.analisis = resultados.get('resumen', '')
+        certificado.modelo_usado = resultados.get('modelo', '')
+        certificado.pdf = reverse(
+            'descargar_certificado', args=[certificado.id]
+        )
+        certificado.save()
+
+        if generado_con_ia:
+            messages.success(
+                request,
+                '¡Prueba finalizada! Tu análisis y certificación ya están disponibles.',
+            )
+        else:
+            messages.warning(
+                request,
+                'Tu certificación fue generada con la interpretación de respaldo '
+                'de ReclutaMente porque el agente de IA no estuvo disponible.',
+            )
+    except Exception:
+        logger.exception('No fue posible guardar la certificación de temperamento.')
+        messages.warning(
+            request,
+            'Tus respuestas fueron guardadas, pero no se pudo generar la '
+            'certificación. Inténtalo nuevamente más tarde.',
+        )
+
+    return True
 
 
 
@@ -2778,6 +2854,9 @@ def test(request, test_id):
 
 
 
+        if _procesar_certificacion_temperamento(request, intento):
+            return redirect('profesional_certificaciones')
+
         messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
 
         return redirect('home_profesionales')
@@ -2923,6 +3002,9 @@ def resolver_test(request, intento_id):
         intento.save()
 
 
+
+        if _procesar_certificacion_temperamento(request, intento):
+            return redirect('profesional_certificaciones')
 
         messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
 
@@ -5248,6 +5330,139 @@ def profesional_certificaciones(request):
         'total_completadas': total_completadas,
         'total_en_progreso': total_en_progreso,
         'total_certificaciones': total_certificaciones,
+        'EstadoIntento': EstadoIntento,
     }
     return render(request, 'Profesionales/certificaciones.html', context)
+
+
+@solo_profesional
+def descargar_certificado(request, certificado_id):
+    usuario = get_recluta_user(request)
+    persona = _get_persona_for_user(usuario)
+    certificado = get_object_or_404(
+        Certificado.objects.select_related(
+            'intento', 'intento__persona', 'intento__test'
+        ),
+        id=certificado_id,
+        intento__persona=persona,
+    )
+
+    contenido = generar_pdf_certificado(certificado)
+    response = HttpResponse(contenido, content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="certificado-{certificado.codigo_verificacion}.pdf"'
+    )
+    response['Content-Length'] = len(contenido)
+    return response
+
+
+def contacto_empresas(request):
+    datos = {
+        'nombre_empresa': '',
+        'email': '',
+        'telefono': '',
+        'razon': '',
+    }
+
+    if request.method == 'POST':
+        nombre_empresa = request.POST.get('nombre_empresa', '').strip()
+        email_contacto = request.POST.get('email', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        razon = request.POST.get('razon', '').strip()
+
+        datos = {
+            'nombre_empresa': nombre_empresa,
+            'email': email_contacto,
+            'telefono': telefono,
+            'razon': razon,
+        }
+
+        if not nombre_empresa or not email_contacto or not telefono or not razon:
+            messages.error(request, 'Todos los campos son obligatorios.')
+            return render(request, 'contacto.html', {'datos': datos})
+
+        try:
+            validate_email(email_contacto)
+        except ValidationError:
+            messages.error(request, 'Ingresa un correo electrónico válido.')
+            return render(request, 'contacto.html', {'datos': datos})
+
+        # Destinatario principal: el correo corporativo configurado para ReclutaMente.
+        destinatarios = [getattr(settings, 'EMAIL_CONTACTO_RECLUTAMENTE', 'reeclutamente@gmail.com')]
+
+        # Registramos también como ticket para trazabilidad en el panel SuperAdmin
+        try:
+            empresa_existente = Empresa.objects.filter(
+                Q(nombre__iexact=nombre_empresa) | Q(usuario__email__iexact=email_contacto)
+            ).first()
+            conteo = Ticket.objects.count() + 1
+            codigo_ticket = f"CONT-{conteo:03d}"
+            while Ticket.objects.filter(codigo=codigo_ticket).exists():
+                conteo += 1
+                codigo_ticket = f"CONT-{conteo:03d}"
+
+            Ticket.objects.create(
+                codigo=codigo_ticket,
+                empresa=empresa_existente,
+                tipo='Soporte General',
+                asunto=f"Contacto empresa: {nombre_empresa}",
+                destino='Plataforma General',
+                rango_fechas=telefono,
+                descripcion=(
+                    f"Empresa: {nombre_empresa}\n"
+                    f"Correo: {email_contacto}\n"
+                    f"Teléfono: {telefono}\n\n"
+                    f"Motivo de contacto:\n{razon}"
+                ),
+                estado='Abierto',
+            )
+        except Exception as e:
+            print('--- ERROR AL REGISTRAR TICKET DE CONTACTO ---', e)
+
+        asunto_correo = f"[ReclutaMente] Solicitud de contacto corporativo: {nombre_empresa}"
+        mensaje_texto = (
+            f"Nueva solicitud de contacto para empresas en ReclutaMente.\n\n"
+            f"Empresa: {nombre_empresa}\n"
+            f"Correo electrónico: {email_contacto}\n"
+            f"Teléfono: {telefono}\n\n"
+            f"Razón de contacto:\n{razon}\n"
+        )
+        mensaje_html = (
+            f"<div style='font-family: Inter, Arial, sans-serif; color: #18181b; max-width: 600px;'>"
+            f"<h2 style='color: #1e1b4b; margin-bottom: 8px;'>Nueva solicitud de contacto corporativo</h2>"
+            f"<p style='color: #52525b; font-size: 14px;'>Se ha recibido un mensaje desde el formulario de contacto para empresas en <strong>ReclutaMente</strong>.</p>"
+            f"<hr style='border: none; border-top: 1px solid #e4e4e7; margin: 20px 0;'>"
+            f"<p><strong>Nombre de la empresa:</strong> {nombre_empresa}</p>"
+            f"<p><strong>Correo electrónico:</strong> <a href='mailto:{email_contacto}'>{email_contacto}</a></p>"
+            f"<p><strong>Teléfono:</strong> {telefono}</p>"
+            f"<p><strong>Razón por la que nos contacta:</strong></p>"
+            f"<div style='background: #f4f4f5; padding: 14px; border-radius: 8px; white-space: pre-line;'>{razon}</div>"
+            f"</div>"
+        )
+
+        try:
+            correo = EmailMultiAlternatives(
+                asunto_correo,
+                mensaje_texto,
+                None,
+                destinatarios,
+                reply_to=[email_contacto],
+            )
+            correo.attach_alternative(mensaje_html, 'text/html')
+            correo.send(fail_silently=False)
+            messages.success(
+                request,
+                '¡Gracias por contactarnos! Tu solicitud fue enviada al administrador y nos comunicaremos con tu empresa pronto.'
+            )
+            return redirect('contacto')
+        except Exception as e:
+            print('--- ERROR AL ENVIAR CORREO DE CONTACTO ---', e)
+            messages.success(
+                request,
+                '¡Tu solicitud fue registrada correctamente! Nuestro equipo administrativo se pondrá en contacto con tu empresa pronto.'
+            )
+            return redirect('contacto')
+
+    return render(request, 'contacto.html', {'datos': datos})
+
 
