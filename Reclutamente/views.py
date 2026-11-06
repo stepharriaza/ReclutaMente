@@ -3335,11 +3335,20 @@ def resolver_test(request, intento_id):
 
 
 
+        nombre_test = (test_obj.nombre or '').lower()
+        if 'dass' in nombre_test or 'frases incompletas' in nombre_test:
+            messages.info(
+                request,
+                'Tus respuestas fueron guardadas correctamente. '
+                'El an\u00e1lisis de este test se enviar\u00e1 m\u00e1s tarde; '
+                'podr\u00e1s consultarlo en tus certificaciones.',
+            )
+            return redirect('profesional_certificaciones')
+
         if _procesar_certificacion(request, intento):
             return redirect('profesional_certificaciones')
 
-        messages.success(request, '¡Respuestas enviadas correctamente! Tus resultados fueron guardados.')
-
+        messages.success(request, '��Respuestas enviadas correctamente! Tus resultados fueron guardados.')
         return redirect('tests_categoria', categoria_id=test_obj.categoria_id)
 
 
