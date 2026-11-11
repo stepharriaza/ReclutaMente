@@ -148,423 +148,6 @@
         </div>
         {% endif %}
 
-        {% if resultados_ia %}
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <h2 class="text-lg font-bold text-gray-900">Ranking de candidatos</h2>
-                        <p class="text-sm text-gray-500 mt-1">Resultados guardados: se mantienen disponibles cada vez que vuelvas a esta vacante.</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700">{{ sesgo_label }}</span>
-                        <a href="#fabric" class="inline-flex items-center justify-center bg-white border border-cyan-300 text-cyan-700 hover:bg-cyan-50 font-semibold px-4 py-2 rounded-xl text-xs transition">
-                            Ver tablero
-                        </a>
-                        <button type="submit" form="eval-form" id="eval-repeat-btn" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
-                            Evaluar de nuevo
-                        </button>
-                    </div>
-                </div>
-                <details class="mt-3">
-                    <summary class="cursor-pointer text-xs font-medium text-indigo-600">Ver criterios usados</summary>
-                    <p class="mt-2 text-xs text-gray-600 whitespace-pre-line">{{ criterios }}</p>
-                </details>
-            </div>
-
-            <div class="px-6 pt-6">
-                <h3 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Comparativa de puntaje global</h3>
-                <div class="mt-3 space-y-3">
-                    {% for item in resultados_ia %}
-                    <div class="flex items-center gap-3">
-                        <span class="w-36 sm:w-48 shrink-0 truncate text-sm text-gray-700">{{ item.persona.nombre }}</span>
-                        <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div class="h-full rounded-full transition-all" style="width: {{ item.resultado.puntaje|default:0 }}%; background-color: {{ item.nivel.color }};"></div>
-                        </div>
-                        <span class="w-10 text-right text-sm font-semibold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <div class="overflow-x-auto mt-4">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
-                            <th class="py-3 px-6 font-semibold">#</th>
-                            <th class="py-3 px-6 font-semibold">Participante</th>
-                            <th class="py-3 px-6 font-semibold">Pruebas</th>
-                            <th class="py-3 px-6 font-semibold">Puntaje IA</th>
-                            <th class="py-3 px-6 font-semibold">Recomendación</th>
-                            <th class="py-3 px-6 font-semibold">Informe</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-                        {% for item in resultados_ia %}
-                        <tr class="hover:bg-gray-50/50 transition">
-                            <td class="py-4 px-6 font-semibold text-gray-500">{{ forloop.counter }}</td>
-                            <td class="py-4 px-6">
-                                <p class="font-medium text-gray-900">{{ item.persona.nombre }}</p>
-                                <p class="text-xs text-gray-500">{{ item.persona.email }}</p>
-                            </td>
-                            <td class="py-4 px-6 text-gray-600">
-                                {% for intento in item.intentos %}
-                                {{ intento.test.nombre }}{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            </td>
-                            <td class="py-4 px-6">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
-                                    <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                        <div class="h-full rounded-full" style="width: {{ item.resultado.puntaje|default:0 }}%; background-color: {{ item.nivel.color }};"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4 px-6">
-                                {% if item.resultado.recomendacion == 'Apto' %}
-                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">{{ item.resultado.recomendacion }}</span>
-                                {% elif item.resultado.recomendacion == 'No apto' %}
-                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">{{ item.resultado.recomendacion }}</span>
-                                {% else %}
-                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">{{ item.resultado.recomendacion }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-4 px-6">
-                                <a href="#informe-{{ item.persona.id }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition">Ver informe</a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="space-y-6">
-            {% for item in resultados_ia %}
-            <div id="informe-{{ item.persona.id }}" class="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
-                <div class="bg-gradient-to-br from-indigo-950 via-indigo-900 to-indigo-800 p-6 sm:p-8 text-white">
-                    <div class="flex flex-col lg:flex-row justify-between gap-6">
-                        <div class="flex items-start gap-4">
-                            <div class="h-14 w-14 shrink-0 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-bold">
-                                {{ item.persona.nombre|slice:":1"|upper }}
-                            </div>
-                            <div>
-                                <p class="text-[11px] uppercase tracking-[0.22em] text-indigo-300">Informe de evaluación</p>
-                                <h3 class="text-2xl font-bold mt-1">{{ item.persona.nombre }}</h3>
-                                <p class="text-sm text-indigo-200 mt-1">{{ item.persona.email }}</p>
-                                <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                                    <span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100">{{ item.nivel.etiqueta }}</span>
-                                    {% if item.resultado.recomendacion == 'Apto' %}
-                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">{{ item.resultado.recomendacion }}</span>
-                                    {% elif item.resultado.recomendacion == 'No apto' %}
-                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-red-400/15 text-red-200 border border-red-300/30">{{ item.resultado.recomendacion }}</span>
-                                    {% else %}
-                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/30">{{ item.resultado.recomendacion }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 p-4">
-                            <div class="relative h-24 w-24 shrink-0 rounded-full" style="background: conic-gradient({{ item.nivel.color }} {{ item.resultado.puntaje|default:0 }}%, rgba(255,255,255,0.15) 0);">
-                                <div class="absolute inset-2.5 rounded-full bg-indigo-950 flex flex-col items-center justify-center">
-                                    <span class="text-2xl font-bold leading-none">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
-                                    <span class="text-[10px] uppercase tracking-wider text-indigo-300 mt-1">/ 100</span>
-                                </div>
-                            </div>
-                            <div>
-                                <p class="text-[11px] uppercase tracking-wider text-indigo-300">Puntaje global</p>
-                                <p class="text-sm text-indigo-100 mt-1 max-w-[13rem] leading-relaxed">{{ item.nivel.descripcion }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-6 sm:p-8 space-y-6">
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                        <div class="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
-                            <div class="flex items-center justify-between gap-2">
-                                <h4 class="text-sm font-bold text-gray-900">Desempeño por prueba</h4>
-                                <span class="text-[10px] uppercase tracking-wider text-gray-400">Escala 0-100</span>
-                            </div>
-                            {% if item.barras_pruebas %}
-                            <div class="mt-4 space-y-3">
-                                {% for barra in item.barras_pruebas %}
-                                <div>
-                                    <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
-                                        <span class="truncate">{{ barra.nombre }}</span>
-                                        <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
-                                    </div>
-                                    <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div class="h-full rounded-full" style="width: {{ barra.porcentaje }}%; background-color: {{ item.nivel.color }};"></div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <p class="mt-3 text-sm text-gray-400">La IA no devolvió un puntaje por prueba.</p>
-                            {% endif %}
-                        </div>
-
-                        <div class="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
-                            <div class="flex items-center justify-between gap-2">
-                                <h4 class="text-sm font-bold text-gray-900">Distribución por dimensión</h4>
-                                <span class="text-[10px] uppercase tracking-wider text-gray-400">Intensidad relativa</span>
-                            </div>
-                            {% if item.barras_dimensiones %}
-                            <div class="mt-4 space-y-3">
-                                {% for barra in item.barras_dimensiones %}
-                                <div>
-                                    <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
-                                        <span class="truncate">{{ barra.nombre }}</span>
-                                        <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
-                                    </div>
-                                    <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            <p class="mt-3 text-[11px] text-gray-400">La dimensión con mayor puntaje se muestra al 100%. Los valores son la suma de puntos obtenidos en cada dimensión.</p>
-                            {% else %}
-                            <p class="mt-3 text-sm text-gray-400">Esta evaluación no registró un desglose por dimensión.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
-                            <div class="flex items-center gap-2">
-                                <span class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">✓</span>
-                                <h4 class="text-sm font-bold text-emerald-900">Fortalezas</h4>
-                            </div>
-                            {% if item.resultado.fortalezas %}
-                            <ul class="mt-3 space-y-2 text-sm text-emerald-900">
-                                {% for fortaleza in item.resultado.fortalezas %}
-                                <li class="flex gap-2">
-                                    <span class="mt-0.5 text-emerald-600 font-bold">✓</span>
-                                    <span>{{ fortaleza }}</span>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            <p class="mt-3 text-sm text-emerald-700/60">No se identificaron fortalezas destacadas.</p>
-                            {% endif %}
-                        </div>
-
-                        <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
-                            <div class="flex items-center gap-2">
-                                <span class="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">!</span>
-                                <h4 class="text-sm font-bold text-amber-900">Brechas / áreas de mejora</h4>
-                            </div>
-                            {% if item.resultado.brechas %}
-                            <ul class="mt-3 space-y-2 text-sm text-amber-900">
-                                {% for brecha in item.resultado.brechas %}
-                                <li class="flex gap-2">
-                                    <span class="mt-0.5 text-amber-600 font-bold">!</span>
-                                    <span>{{ brecha }}</span>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            <p class="mt-3 text-sm text-amber-700/60">No se identificaron brechas relevantes.</p>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-gray-200 p-5 sm:p-6">
-                        <div class="flex items-center gap-2">
-                            <span class="h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">✦</span>
-                            <h4 class="text-sm font-bold text-gray-900">Informe general de la IA</h4>
-                        </div>
-                        <div class="mt-3 text-sm text-gray-700 leading-relaxed">{{ item.resultado.informe|linebreaksbr }}</div>
-                    </div>
-
-                    {% if item.historial %}
-                    <details class="rounded-2xl border border-gray-200 p-5 sm:p-6">
-                        <summary class="cursor-pointer text-sm font-bold text-gray-900">
-                            Evaluaciones anteriores ({{ item.historial|length }})
-                        </summary>
-                        <div class="mt-4 space-y-3">
-                            {% for anterior in item.historial reversed %}
-                            <details class="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
-                                <summary class="flex cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                                    <span class="text-xs font-semibold text-gray-700">{{ anterior.fecha|default:"Sin fecha" }}</span>
-                                    <span class="text-xs text-gray-600">
-                                        Puntaje <span class="font-bold text-gray-900">{{ anterior.puntaje|default_if_none:"—" }}</span>
-                                        · {{ anterior.recomendacion|default:"Sin recomendación" }}
-                                    </span>
-                                </summary>
-                                <div class="mt-3 space-y-2 text-xs text-gray-600">
-                                    {% if anterior.criterios %}
-                                    <p><span class="font-semibold">Criterios:</span> {{ anterior.criterios }}</p>
-                                    {% endif %}
-                                    {% if anterior.sesgo %}
-                                    <p><span class="font-semibold">Enfoque:</span> {{ anterior.sesgo }}{% if anterior.sesgo_detalle %} · {{ anterior.sesgo_detalle }}{% endif %}</p>
-                                    {% endif %}
-                                    {% if anterior.informe %}
-                                    <p class="whitespace-pre-line leading-relaxed">{{ anterior.informe }}</p>
-                                    {% endif %}
-                                </div>
-                            </details>
-                            {% endfor %}
-                        </div>
-                    </details>
-                    {% endif %}
-
-                    {% if item.pruebas_detalle %}
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-900">Detalle por prueba</h4>
-                        <div class="mt-3 space-y-3">
-                            {% for detalle in item.pruebas_detalle %}
-                            <details class="group rounded-2xl border border-gray-200 bg-white" {% if forloop.first %}open{% endif %}>
-                                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
-                                    <div>
-                                        <p class="text-sm font-semibold text-gray-900">{{ detalle.resultado.test }}</p>
-                                        {% if detalle.intento %}
-                                        <p class="text-xs text-gray-500">{{ detalle.intento.test.nombre }} · {{ detalle.intento.fecha|date:"d/m/Y H:i" }}</p>
-                                        {% endif %}
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-sm font-bold text-gray-900">{{ detalle.resultado.puntaje|default_if_none:"—" }}</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
-                                </summary>
-                                <div class="border-t border-gray-100 p-4 space-y-4">
-                                    {% if detalle.barras_dimensiones %}
-                                    <div class="space-y-2">
-                                        {% for barra in detalle.barras_dimensiones %}
-                                        <div>
-                                            <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
-                                                <span class="truncate">{{ barra.nombre }}</span>
-                                                <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
-                                            </div>
-                                            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    {% endif %}
-
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <p class="text-xs uppercase tracking-wider font-semibold text-emerald-700">Fortalezas</p>
-                                            {% if detalle.resultado.fortalezas %}
-                                            <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                                                {% for fortaleza in detalle.resultado.fortalezas %}
-                                                <li>{{ fortaleza }}</li>
-                                                {% endfor %}
-                                            </ul>
-                                            {% else %}
-                                            <p class="mt-1 text-sm text-gray-400">Sin fortalezas destacadas.</p>
-                                            {% endif %}
-                                        </div>
-                                        <div>
-                                            <p class="text-xs uppercase tracking-wider font-semibold text-amber-700">Brechas</p>
-                                            {% if detalle.resultado.brechas %}
-                                            <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
-                                                {% for brecha in detalle.resultado.brechas %}
-                                                <li>{{ brecha }}</li>
-                                                {% endfor %}
-                                            </ul>
-                                            {% else %}
-                                            <p class="mt-1 text-sm text-gray-400">Sin brechas relevantes.</p>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-
-                                    {% if detalle.resultado.informe %}
-                                    <p class="text-sm text-gray-700 leading-relaxed">{{ detalle.resultado.informe|linebreaksbr }}</p>
-                                    {% endif %}
-                                </div>
-                            </details>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% elif total_candidatos %}
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
-            <h2 class="text-lg font-bold text-gray-900">Participantes que se evaluarán</h2>
-            <p class="text-sm text-gray-500 mt-1">Revisa el criterio definido y presiona “Evaluar participantes”.</p>
-            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-                {% for candidato in candidatos %}
-                <div class="border border-gray-200 rounded-xl p-4">
-                    <p class="font-medium text-gray-900">{{ candidato.persona.nombre }}</p>
-                    <p class="text-xs text-gray-500">{{ candidato.persona.email }}</p>
-                    <p class="text-xs text-gray-600 mt-2">
-                        {% for intento in candidato.intentos %}
-                        {{ intento.test.nombre }}{% if not forloop.last %}, {% endif %}
-                        {% endfor %}
-                    </p>
-                    {% if candidato.analisis %}
-                    <div class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-600">
-                        <p>
-                            Última evaluación:
-                            <span class="font-semibold text-gray-900">{{ candidato.analisis.perfil.puntaje|default_if_none:"—" }}</span>
-                            · {{ candidato.analisis.perfil.recomendacion|default:"Sin recomendación" }}
-                        </p>
-                        <details class="mt-2">
-                            <summary class="cursor-pointer font-medium text-indigo-600">Ver informe guardado</summary>
-                            <div class="mt-2 space-y-1 text-gray-700 leading-relaxed">
-                                {% if candidato.barras_dimensiones %}
-                                <div class="mb-3 space-y-2">
-                                    <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Distribución por dimensión</p>
-                                    {% for barra in candidato.barras_dimensiones %}
-                                    <div>
-                                        <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
-                                            <span class="truncate">{{ barra.nombre }}</span>
-                                            <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
-                                        </div>
-                                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                                {% endif %}
-                                {% if candidato.analisis.perfil.criterios %}
-                                <p><span class="font-semibold">Criterios:</span> {{ candidato.analisis.perfil.criterios }}</p>
-                                {% endif %}
-                                {% if candidato.analisis.perfil.sesgo %}
-                                <p><span class="font-semibold">Enfoque:</span> {{ candidato.analisis.perfil.sesgo }}{% if candidato.analisis.perfil.sesgo_detalle %} · {{ candidato.analisis.perfil.sesgo_detalle }}{% endif %}</p>
-                                {% endif %}
-                                {% if candidato.analisis.perfil.perfil_objetivo %}
-                                {% for perfil in perfiles %}
-                                {% if perfil.valor == candidato.analisis.perfil.perfil_objetivo %}
-                                <p><span class="font-semibold">Perfil:</span> {{ perfil.etiqueta }}</p>
-                                {% endif %}
-                                {% endfor %}
-                                {% endif %}
-                                {% if candidato.analisis.perfil.competencias %}
-                                <p><span class="font-semibold">Competencias:</span>
-                                    {% for competencia in competencias_opciones %}
-                                    {% if competencia.valor in candidato.analisis.perfil.competencias %}{{ competencia.etiqueta }}{% if not forloop.last %}, {% endif %}{% endif %}
-                                    {% endfor %}
-                                </p>
-                                {% endif %}
-                                {% for prueba in candidato.analisis.perfil.pruebas %}
-                                <p><span class="font-semibold">{{ prueba.test }}:</span> {{ prueba.puntaje|default_if_none:"—" }}{% if prueba.informe %} · {{ prueba.informe }}{% endif %}</p>
-                                {% endfor %}
-                                <div>{{ candidato.analisis.informe_texto|linebreaksbr }}</div>
-                            </div>
-                        </details>
-                    </div>
-                    {% else %}
-                    <p class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400">Sin evaluación guardada.</p>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
         <div id="fabric" class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
             <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950 px-6 py-5 text-white">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -1028,6 +611,421 @@
                 {% endif %}
             </div>
         </div>
+
+        {% if resultados_ia %}
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50/50">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Ranking de candidatos</h2>
+                        <p class="text-sm text-gray-500 mt-1">Resultados guardados: se mantienen disponibles cada vez que vuelvas a esta vacante.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-semibold px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700">{{ sesgo_label }}</span>
+                        <button type="submit" form="eval-form" id="eval-repeat-btn" class="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-xl text-xs transition">
+                            Evaluar de nuevo
+                        </button>
+                    </div>
+                </div>
+                <details class="mt-3">
+                    <summary class="cursor-pointer text-xs font-medium text-indigo-600">Ver criterios usados</summary>
+                    <p class="mt-2 text-xs text-gray-600 whitespace-pre-line">{{ criterios }}</p>
+                </details>
+            </div>
+
+            <div class="px-6 pt-6">
+                <h3 class="text-xs uppercase tracking-wider font-semibold text-gray-400">Comparativa de puntaje global</h3>
+                <div class="mt-3 space-y-3">
+                    {% for item in resultados_ia %}
+                    <div class="flex items-center gap-3">
+                        <span class="w-36 sm:w-48 shrink-0 truncate text-sm text-gray-700">{{ item.persona.nombre }}</span>
+                        <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all" style="width: {{ item.resultado.puntaje|default:0 }}%; background-color: {{ item.nivel.color }};"></div>
+                        </div>
+                        <span class="w-10 text-right text-sm font-semibold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="overflow-x-auto mt-4">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-3 px-6 font-semibold">#</th>
+                            <th class="py-3 px-6 font-semibold">Participante</th>
+                            <th class="py-3 px-6 font-semibold">Pruebas</th>
+                            <th class="py-3 px-6 font-semibold">Puntaje IA</th>
+                            <th class="py-3 px-6 font-semibold">Recomendación</th>
+                            <th class="py-3 px-6 font-semibold">Informe</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                        {% for item in resultados_ia %}
+                        <tr class="hover:bg-gray-50/50 transition">
+                            <td class="py-4 px-6 font-semibold text-gray-500">{{ forloop.counter }}</td>
+                            <td class="py-4 px-6">
+                                <p class="font-medium text-gray-900">{{ item.persona.nombre }}</p>
+                                <p class="text-xs text-gray-500">{{ item.persona.email }}</p>
+                            </td>
+                            <td class="py-4 px-6 text-gray-600">
+                                {% for intento in item.intentos %}
+                                {{ intento.test.nombre }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="py-4 px-6">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-gray-900">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
+                                    <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width: {{ item.resultado.puntaje|default:0 }}%; background-color: {{ item.nivel.color }};"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6">
+                                {% if item.resultado.recomendacion == 'Apto' %}
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">{{ item.resultado.recomendacion }}</span>
+                                {% elif item.resultado.recomendacion == 'No apto' %}
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">{{ item.resultado.recomendacion }}</span>
+                                {% else %}
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">{{ item.resultado.recomendacion }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-6">
+                                <a href="#informe-{{ item.persona.id }}" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition">Ver informe</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            {% for item in resultados_ia %}
+            <div id="informe-{{ item.persona.id }}" class="bg-white border border-gray-200 rounded-3xl shadow-sm overflow-hidden">
+                <div class="bg-gradient-to-br from-indigo-950 via-indigo-900 to-indigo-800 p-6 sm:p-8 text-white">
+                    <div class="flex flex-col lg:flex-row justify-between gap-6">
+                        <div class="flex items-start gap-4">
+                            <div class="h-14 w-14 shrink-0 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-xl font-bold">
+                                {{ item.persona.nombre|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-[0.22em] text-indigo-300">Informe de evaluación</p>
+                                <h3 class="text-2xl font-bold mt-1">{{ item.persona.nombre }}</h3>
+                                <p class="text-sm text-indigo-200 mt-1">{{ item.persona.email }}</p>
+                                <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                                    <span class="px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100">{{ item.nivel.etiqueta }}</span>
+                                    {% if item.resultado.recomendacion == 'Apto' %}
+                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-emerald-400/15 text-emerald-200 border border-emerald-300/30">{{ item.resultado.recomendacion }}</span>
+                                    {% elif item.resultado.recomendacion == 'No apto' %}
+                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-red-400/15 text-red-200 border border-red-300/30">{{ item.resultado.recomendacion }}</span>
+                                    {% else %}
+                                    <span class="font-semibold px-2.5 py-1 rounded-full bg-amber-400/15 text-amber-200 border border-amber-300/30">{{ item.resultado.recomendacion }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 rounded-2xl bg-white/5 border border-white/10 p-4">
+                            <div class="relative h-24 w-24 shrink-0 rounded-full" style="background: conic-gradient({{ item.nivel.color }} {{ item.resultado.puntaje|default:0 }}%, rgba(255,255,255,0.15) 0);">
+                                <div class="absolute inset-2.5 rounded-full bg-indigo-950 flex flex-col items-center justify-center">
+                                    <span class="text-2xl font-bold leading-none">{{ item.resultado.puntaje|default_if_none:"—" }}</span>
+                                    <span class="text-[10px] uppercase tracking-wider text-indigo-300 mt-1">/ 100</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-[11px] uppercase tracking-wider text-indigo-300">Puntaje global</p>
+                                <p class="text-sm text-indigo-100 mt-1 max-w-[13rem] leading-relaxed">{{ item.nivel.descripcion }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 sm:p-8 space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="text-sm font-bold text-gray-900">Desempeño por prueba</h4>
+                                <span class="text-[10px] uppercase tracking-wider text-gray-400">Escala 0-100</span>
+                            </div>
+                            {% if item.barras_pruebas %}
+                            <div class="mt-4 space-y-3">
+                                {% for barra in item.barras_pruebas %}
+                                <div>
+                                    <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                        <span class="truncate">{{ barra.nombre }}</span>
+                                        <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                    </div>
+                                    <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full" style="width: {{ barra.porcentaje }}%; background-color: {{ item.nivel.color }};"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="mt-3 text-sm text-gray-400">La IA no devolvió un puntaje por prueba.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="text-sm font-bold text-gray-900">Distribución por dimensión</h4>
+                                <span class="text-[10px] uppercase tracking-wider text-gray-400">Intensidad relativa</span>
+                            </div>
+                            {% if item.barras_dimensiones %}
+                            <div class="mt-4 space-y-3">
+                                {% for barra in item.barras_dimensiones %}
+                                <div>
+                                    <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                        <span class="truncate">{{ barra.nombre }}</span>
+                                        <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                    </div>
+                                    <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <p class="mt-3 text-[11px] text-gray-400">La dimensión con mayor puntaje se muestra al 100%. Los valores son la suma de puntos obtenidos en cada dimensión.</p>
+                            {% else %}
+                            <p class="mt-3 text-sm text-gray-400">Esta evaluación no registró un desglose por dimensión.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
+                            <div class="flex items-center gap-2">
+                                <span class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-bold">✓</span>
+                                <h4 class="text-sm font-bold text-emerald-900">Fortalezas</h4>
+                            </div>
+                            {% if item.resultado.fortalezas %}
+                            <ul class="mt-3 space-y-2 text-sm text-emerald-900">
+                                {% for fortaleza in item.resultado.fortalezas %}
+                                <li class="flex gap-2">
+                                    <span class="mt-0.5 text-emerald-600 font-bold">✓</span>
+                                    <span>{{ fortaleza }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="mt-3 text-sm text-emerald-700/60">No se identificaron fortalezas destacadas.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5">
+                            <div class="flex items-center gap-2">
+                                <span class="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-sm font-bold">!</span>
+                                <h4 class="text-sm font-bold text-amber-900">Brechas / áreas de mejora</h4>
+                            </div>
+                            {% if item.resultado.brechas %}
+                            <ul class="mt-3 space-y-2 text-sm text-amber-900">
+                                {% for brecha in item.resultado.brechas %}
+                                <li class="flex gap-2">
+                                    <span class="mt-0.5 text-amber-600 font-bold">!</span>
+                                    <span>{{ brecha }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="mt-3 text-sm text-amber-700/60">No se identificaron brechas relevantes.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-gray-200 p-5 sm:p-6">
+                        <div class="flex items-center gap-2">
+                            <span class="h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm font-bold">✦</span>
+                            <h4 class="text-sm font-bold text-gray-900">Informe general de la IA</h4>
+                        </div>
+                        <div class="mt-3 text-sm text-gray-700 leading-relaxed">{{ item.resultado.informe|linebreaksbr }}</div>
+                    </div>
+
+                    {% if item.historial %}
+                    <details class="rounded-2xl border border-gray-200 p-5 sm:p-6">
+                        <summary class="cursor-pointer text-sm font-bold text-gray-900">
+                            Evaluaciones anteriores ({{ item.historial|length }})
+                        </summary>
+                        <div class="mt-4 space-y-3">
+                            {% for anterior in item.historial reversed %}
+                            <details class="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                                <summary class="flex cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                    <span class="text-xs font-semibold text-gray-700">{{ anterior.fecha|default:"Sin fecha" }}</span>
+                                    <span class="text-xs text-gray-600">
+                                        Puntaje <span class="font-bold text-gray-900">{{ anterior.puntaje|default_if_none:"—" }}</span>
+                                        · {{ anterior.recomendacion|default:"Sin recomendación" }}
+                                    </span>
+                                </summary>
+                                <div class="mt-3 space-y-2 text-xs text-gray-600">
+                                    {% if anterior.criterios %}
+                                    <p><span class="font-semibold">Criterios:</span> {{ anterior.criterios }}</p>
+                                    {% endif %}
+                                    {% if anterior.sesgo %}
+                                    <p><span class="font-semibold">Enfoque:</span> {{ anterior.sesgo }}{% if anterior.sesgo_detalle %} · {{ anterior.sesgo_detalle }}{% endif %}</p>
+                                    {% endif %}
+                                    {% if anterior.informe %}
+                                    <p class="whitespace-pre-line leading-relaxed">{{ anterior.informe }}</p>
+                                    {% endif %}
+                                </div>
+                            </details>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    {% endif %}
+
+                    {% if item.pruebas_detalle %}
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-900">Detalle por prueba</h4>
+                        <div class="mt-3 space-y-3">
+                            {% for detalle in item.pruebas_detalle %}
+                            <details class="group rounded-2xl border border-gray-200 bg-white" {% if forloop.first %}open{% endif %}>
+                                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900">{{ detalle.resultado.test }}</p>
+                                        {% if detalle.intento %}
+                                        <p class="text-xs text-gray-500">{{ detalle.intento.test.nombre }} · {{ detalle.intento.fecha|date:"d/m/Y H:i" }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm font-bold text-gray-900">{{ detalle.resultado.puntaje|default_if_none:"—" }}</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </summary>
+                                <div class="border-t border-gray-100 p-4 space-y-4">
+                                    {% if detalle.barras_dimensiones %}
+                                    <div class="space-y-2">
+                                        {% for barra in detalle.barras_dimensiones %}
+                                        <div>
+                                            <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                                <span class="truncate">{{ barra.nombre }}</span>
+                                                <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                            </div>
+                                            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <p class="text-xs uppercase tracking-wider font-semibold text-emerald-700">Fortalezas</p>
+                                            {% if detalle.resultado.fortalezas %}
+                                            <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                                                {% for fortaleza in detalle.resultado.fortalezas %}
+                                                <li>{{ fortaleza }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% else %}
+                                            <p class="mt-1 text-sm text-gray-400">Sin fortalezas destacadas.</p>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <p class="text-xs uppercase tracking-wider font-semibold text-amber-700">Brechas</p>
+                                            {% if detalle.resultado.brechas %}
+                                            <ul class="mt-1 space-y-1 text-sm text-gray-700 list-disc list-inside">
+                                                {% for brecha in detalle.resultado.brechas %}
+                                                <li>{{ brecha }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% else %}
+                                            <p class="mt-1 text-sm text-gray-400">Sin brechas relevantes.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    {% if detalle.resultado.informe %}
+                                    <p class="text-sm text-gray-700 leading-relaxed">{{ detalle.resultado.informe|linebreaksbr }}</p>
+                                    {% endif %}
+                                </div>
+                            </details>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif total_candidatos %}
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
+            <h2 class="text-lg font-bold text-gray-900">Participantes que se evaluarán</h2>
+            <p class="text-sm text-gray-500 mt-1">Revisa el criterio definido y presiona “Evaluar participantes”.</p>
+            <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for candidato in candidatos %}
+                <div class="border border-gray-200 rounded-xl p-4">
+                    <p class="font-medium text-gray-900">{{ candidato.persona.nombre }}</p>
+                    <p class="text-xs text-gray-500">{{ candidato.persona.email }}</p>
+                    <p class="text-xs text-gray-600 mt-2">
+                        {% for intento in candidato.intentos %}
+                        {{ intento.test.nombre }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    {% if candidato.analisis %}
+                    <div class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-600">
+                        <p>
+                            Última evaluación:
+                            <span class="font-semibold text-gray-900">{{ candidato.analisis.perfil.puntaje|default_if_none:"—" }}</span>
+                            · {{ candidato.analisis.perfil.recomendacion|default:"Sin recomendación" }}
+                        </p>
+                        <details class="mt-2">
+                            <summary class="cursor-pointer font-medium text-indigo-600">Ver informe guardado</summary>
+                            <div class="mt-2 space-y-1 text-gray-700 leading-relaxed">
+                                {% if candidato.barras_dimensiones %}
+                                <div class="mb-3 space-y-2">
+                                    <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Distribución por dimensión</p>
+                                    {% for barra in candidato.barras_dimensiones %}
+                                    <div>
+                                        <div class="flex justify-between gap-3 text-xs text-gray-600 mb-1">
+                                            <span class="truncate">{{ barra.nombre }}</span>
+                                            <span class="font-semibold text-gray-900">{{ barra.valor }}</span>
+                                        </div>
+                                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div class="h-full rounded-full bg-indigo-500" style="width: {{ barra.porcentaje }}%;"></div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                {% if candidato.analisis.perfil.criterios %}
+                                <p><span class="font-semibold">Criterios:</span> {{ candidato.analisis.perfil.criterios }}</p>
+                                {% endif %}
+                                {% if candidato.analisis.perfil.sesgo %}
+                                <p><span class="font-semibold">Enfoque:</span> {{ candidato.analisis.perfil.sesgo }}{% if candidato.analisis.perfil.sesgo_detalle %} · {{ candidato.analisis.perfil.sesgo_detalle }}{% endif %}</p>
+                                {% endif %}
+                                {% if candidato.analisis.perfil.perfil_objetivo %}
+                                {% for perfil in perfiles %}
+                                {% if perfil.valor == candidato.analisis.perfil.perfil_objetivo %}
+                                <p><span class="font-semibold">Perfil:</span> {{ perfil.etiqueta }}</p>
+                                {% endif %}
+                                {% endfor %}
+                                {% endif %}
+                                {% if candidato.analisis.perfil.competencias %}
+                                <p><span class="font-semibold">Competencias:</span>
+                                    {% for competencia in competencias_opciones %}
+                                    {% if competencia.valor in candidato.analisis.perfil.competencias %}{{ competencia.etiqueta }}{% if not forloop.last %}, {% endif %}{% endif %}
+                                    {% endfor %}
+                                </p>
+                                {% endif %}
+                                {% for prueba in candidato.analisis.perfil.pruebas %}
+                                <p><span class="font-semibold">{{ prueba.test }}:</span> {{ prueba.puntaje|default_if_none:"—" }}{% if prueba.informe %} · {{ prueba.informe }}{% endif %}</p>
+                                {% endfor %}
+                                <div>{{ candidato.analisis.informe_texto|linebreaksbr }}</div>
+                            </div>
+                        </details>
+                    </div>
+                    {% else %}
+                    <p class="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400">Sin evaluación guardada.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
 
         {% if resultados_ia and candidatos_pendientes %}
         <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-6">
