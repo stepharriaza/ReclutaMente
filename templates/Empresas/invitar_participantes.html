@@ -31,18 +31,31 @@
                 <h2 class="text-lg font-bold text-gray-900">Invitar por correo</h2>
                 <p class="text-sm text-gray-500 mt-1">Agrega uno o varios correos separados por comas, espacios o saltos de línea. Cada invitado recibirá un enlace único y su código QR adjunto.</p>
 
-                <form method="POST" class="mt-5 space-y-4">
+                <form id="invitar-form" method="POST" class="mt-5 space-y-4">
                     {% csrf_token %}
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Correos de los participantes</label>
                         <textarea name="emails" rows="5" required placeholder="candidato1@correo.com, candidato2@correo.com" class="w-full bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none transition"></textarea>
                     </div>
                     <div class="flex justify-end">
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition shadow-sm">
+                        <button id="invitar-btn" type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition shadow-sm">
                             Enviar invitaciones
                         </button>
                     </div>
                 </form>
+
+                <script>
+                (function () {
+                    const form = document.getElementById('invitar-form');
+                    const btn = document.getElementById('invitar-btn');
+                    if (!form || !btn) return;
+                    form.addEventListener('submit', function () {
+                        btn.disabled = true;
+                        btn.textContent = 'Enviando...';
+                        btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    });
+                })();
+                </script>
                 {% endif %}
 
                 <div class="mt-6 pt-6 border-t border-gray-100">

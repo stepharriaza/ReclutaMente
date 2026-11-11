@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.db import models, transaction
+from django.db import models, transaction, IntegrityError
 
 from django.utils import timezone
 
@@ -1188,9 +1188,14 @@ def _tablero_fabric(plaza):
 
         fecha_evaluacion = _formatear_fecha_iso(perfil.get('evaluado_en'))
         if not fecha_evaluacion and representante.fecha:
-            fecha_evaluacion = timezone.localtime(
-                representante.fecha
-            ).strftime('%d/%m/%Y %H:%M')
+            fecha_representante = representante.fecha
+            if timezone.is_naive(fecha_representante):
+                fecha_representante = timezone.make_aware(
+                    fecha_representante, timezone.get_current_timezone()
+                )
+            fecha_evaluacion = timezone.localtime(fecha_representante).strftime(
+                '%d/%m/%Y %H:%M'
+            )
 
         candidatos.append(
             {
@@ -3150,6 +3155,22 @@ def test(request, test_id):
 
 
 
+        # Evitar envíos duplicados por doble clic o reenvío del formulario.
+        ventana_duplicado = timezone.now() - timezone.timedelta(seconds=30)
+        if Intento.objects.filter(
+            persona=persona,
+            test=test_obj,
+            postulacion=postulacion,
+            estado=EstadoIntento.COMPLETADO,
+            fecha__gte=ventana_duplicado,
+        ).exists():
+            messages.warning(
+                request,
+                'Esta prueba ya fue registrada hace unos segundos. '
+                'No es necesario enviarla de nuevo.',
+            )
+            return redirect('home_profesionales')
+
         with transaction.atomic():
 
             intento = Intento.objects.create(
@@ -3497,24 +3518,22 @@ def empresa_invitar_participantes(request, pk):
 
 
 
-                invitacion, _ = InvitacionEvaluacion.objects.get_or_create(
-
-                    plaza=plaza,
-
-                    email=email,
-
-                    defaults={'invitado_por': empresa},
-
-                )
-
                 try:
 
-                    _enviar_invitacion_evaluacion(request, invitacion)
+                    with transaction.atomic():
+                        invitacion, _ = InvitacionEvaluacion.objects.select_for_update(
+                            nowait=False
+                        ).get_or_create(
+                            plaza=plaza,
+                            email=email,
+                            defaults={'invitado_por': empresa},
+                        )
 
-                    if not invitacion.enviado:
+                        if invitacion.enviado:
+                            continue
 
+                        _enviar_invitacion_evaluacion(request, invitacion)
                         invitacion.enviado = True
-
                         invitacion.save(update_fields=['enviado'])
 
                     enviados += 1
@@ -4726,21 +4745,22 @@ def registro_view(request):
 
         try:
 
-            usuario.save()
+            with transaction.atomic():
+                usuario.save()
 
-            Persona.objects.create(
+                Persona.objects.create(
 
-                nombre=nombre,
+                    nombre=nombre,
 
-                email=email,
+                    email=email,
 
-                usuario=usuario
+                    usuario=usuario
 
-            )
+                )
 
 
 
-            django_user = actualizar_contrasena(usuario, password)
+                django_user = actualizar_contrasena(usuario, password)
 
             django_user.backend = 'django.contrib.auth.backends.ModelBackend'
 
@@ -4752,7 +4772,11 @@ def registro_view(request):
 
             return redirect(next_url or 'home_profesionales')
 
+        except IntegrityError:
 
+            messages.error(request, 'Ese correo o nombre de usuario ya fue registrado. Intenta iniciar sesión.')
+
+            return render(request, 'registro.html')
 
         except Exception as e:
 

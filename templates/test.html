@@ -165,7 +165,7 @@
                         <a href="{% url 'tests_categoria' test.categoria.id %}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-bold uppercase tracking-widest text-zinc-700 transition hover:bg-zinc-50">
                             Volver
                         </a>
-                        <button type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
+                        <button id="btn-finalizar" type="submit" class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-indigo-700">
                             Finalizar prueba
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                         </button>
@@ -315,5 +315,17 @@
         })();
     </script>
 
+    <script>
+        (function () {
+            const form = document.getElementById('test-form');
+            const btn = document.getElementById('btn-finalizar');
+            if (!form || !btn) return;
+            form.addEventListener('submit', function () {
+                btn.disabled = true;
+                btn.innerHTML = 'Enviando...';
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+            });
+        })();
+    </script>
 </body>
 </html>
