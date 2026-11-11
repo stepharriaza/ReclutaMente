@@ -1106,11 +1106,73 @@ def _barras_dimensiones_etiquetadas(intentos):
     return barras
 
 
-def _tablero_fabric(plaza):
+PALABRAS_STOP_CRITERIOS = {
+    'con', 'para', 'por', 'debe', 'tener', 'poseer', 'experiencia',
+    'conocimiento', 'capacidad', 'habilidad', 'habilidades', 'y', 'o',
+    'en', 'de', 'la', 'el', 'los', 'las', 'un', 'una', 'al', 'del',
+    'se', 'es', 'son', 'que', 'como', 'su', 'sus', 'a', 'ante',
+    'bajo', 'entre', 'hasta', 'desde', 'sobre', 'sin', 'tras',
+}
+
+
+def _palabras_clave_criterios(texto):
+    """Extrae palabras relevantes de los criterios para medir ajuste."""
+
+    if not texto:
+        return []
+
+    texto = str(texto)
+    texto = unicodedata.normalize('NFKD', texto)
+    texto = ''.join(
+        caracter.lower() if caracter.isalnum() or caracter.isspace() else ' '
+        for caracter in texto
+    )
+
+    palabras = [
+        palabra
+        for palabra in texto.split()
+        if len(palabra) >= 4 and palabra not in PALABRAS_STOP_CRITERIOS
+    ]
+
+    return list(dict.fromkeys(palabras))
+
+
+def _match_perfil_candidato(fortalezas, brechas, informe, palabras_clave):
+    """Calcula un porcentaje de ajuste al perfil buscado.
+
+    Compara las palabras clave de los criterios / perfil objetivo contra
+    las fortalezas, brechas e informe del candidato.
+    """
+
+    if not palabras_clave:
+        return None
+
+    texto = ' '.join(
+        [str(fragmento) for fragmento in (fortalezas + brechas)]
+        + [str(informe)]
+    )
+    texto = unicodedata.normalize('NFKD', texto)
+    texto = ''.join(
+        caracter.lower() if caracter.isalnum() or caracter.isspace() else ' '
+        for caracter in texto
+    )
+
+    coincidencias = sum(
+        1 for palabra in palabras_clave if palabra in texto
+    )
+
+    return round((coincidencias / len(palabras_clave)) * 100, 1)
+
+
+def _tablero_fabric(plaza, criterios='', perfil_objetivo=''):
     """Resume los resultados de la vacante para el tablero integrado."""
 
     grupos = _intentos_completados_por_persona(plaza)
     grupos.sort(key=lambda grupo: grupo[0].persona.nombre.lower())
+
+    palabras_clave = _palabras_clave_criterios(
+        ' '.join([criterios or '', perfil_objetivo or ''])
+    )
 
     candidatos = []
     evaluados = 0
@@ -1197,6 +1259,21 @@ def _tablero_fabric(plaza):
                 '%d/%m/%Y %H:%M'
             )
 
+        fortalezas_candidato = [
+            str(texto) for texto in (perfil.get('fortalezas') or []) if texto
+        ]
+        brechas_candidato = [
+            str(texto) for texto in (perfil.get('brechas') or []) if texto
+        ]
+        informe_candidato = (analisis.informe_texto or '').strip() if analisis else ''
+
+        match_perfil = _match_perfil_candidato(
+            fortalezas_candidato,
+            brechas_candidato,
+            informe_candidato,
+            palabras_clave,
+        )
+
         candidatos.append(
             {
                 'id': representante.persona.id,
@@ -1207,19 +1284,16 @@ def _tablero_fabric(plaza):
                 'color': nivel['color'],
                 'etiqueta': nivel['etiqueta'],
                 'recomendacion': recomendacion,
-                'fortalezas': [
-                    str(texto) for texto in (perfil.get('fortalezas') or []) if texto
-                ],
-                'brechas': [
-                    str(texto) for texto in (perfil.get('brechas') or []) if texto
-                ],
-                'informe': (analisis.informe_texto or '').strip() if analisis else '',
+                'fortalezas': fortalezas_candidato,
+                'brechas': brechas_candidato,
+                'informe': informe_candidato,
                 'modelo': (analisis.modelo_usado or '') if analisis else '',
                 'fecha': fecha_evaluacion,
                 'total_pruebas': len(intentos),
                 'pruebas': pruebas_candidato,
                 'dimensiones': _barras_dimensiones_etiquetadas(intentos),
                 'historial': len(_historial_analisis(analisis)),
+                'match_perfil': match_perfil,
             }
         )
 
@@ -1229,6 +1303,38 @@ def _tablero_fabric(plaza):
 
     for posicion, item in enumerate(candidatos, start=1):
         item['posicion'] = posicion
+
+    podio = [
+        {
+            'id': item['id'],
+            'posicion': item['posicion'],
+            'nombre': item['nombre'],
+            'email': item['email'],
+            'puntaje': item['puntaje'],
+            'color': item['color'],
+            'etiqueta': item['etiqueta'],
+            'recomendacion': item['recomendacion'],
+            'match_perfil': item['match_perfil'],
+            'medalla': {1: '🥇', 2: '🥈', 3: '🥉'}.get(item['posicion'], ''),
+        }
+        for item in candidatos[:3]
+        if item['puntaje'] is not None
+    ]
+
+    dispersion = [
+        {
+            'x': round(item['puntaje'] or 0, 1),
+            'y': round(item['match_perfil'] or 0, 1),
+            'nombre': item['nombre'],
+            'color': item['color'],
+        }
+        for item in candidatos
+        if item['puntaje'] is not None
+    ]
+
+    matches_validos = [
+        item['match_perfil'] for item in candidatos if item['match_perfil'] is not None
+    ]
 
     maximo_dimension = max(dimensiones.values()) if dimensiones else 0
     barras_dimensiones = [
@@ -1272,6 +1378,13 @@ def _tablero_fabric(plaza):
         ),
         'candidatos': candidatos,
         'candidato_inicial': candidatos[0]['id'] if candidatos else None,
+        'podio': podio,
+        'dispersion': dispersion,
+        'match_perfil_promedio': (
+            round(sum(matches_validos) / len(matches_validos), 1)
+            if matches_validos else None
+        ),
+        'palabras_clave_perfil': palabras_clave,
         'dimensiones': barras_dimensiones,
         'recomendaciones': barras_recomendaciones,
         'pruebas': [
@@ -4059,7 +4172,11 @@ def empresa_evaluar_participantes_ia(request, pk):
         'fabric_embed_disponible': _fabric_embed_se_puede_mostrar(
             fabric_embed_url
         ),
-        'tablero_fabric': _tablero_fabric(plaza),
+        'tablero_fabric': _tablero_fabric(
+            plaza,
+            criterios=criterios,
+            perfil_objetivo=perfil_objetivo,
+        ),
         'fabric_workspace_url': getattr(
             settings, 'FABRIC_WORKSPACE_URL', ''
         ),
