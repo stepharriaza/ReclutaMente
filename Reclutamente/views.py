@@ -1336,6 +1336,33 @@ def _tablero_fabric(plaza, criterios='', perfil_objetivo=''):
         item['match_perfil'] for item in candidatos if item['match_perfil'] is not None
     ]
 
+    def _insight_mas_frecuente(listas):
+        conteo = {}
+        for lista in listas:
+            for texto in lista:
+                clave = str(texto).strip()
+                if clave:
+                    conteo[clave] = conteo.get(clave, 0) + 1
+        if not conteo:
+            return None, 0
+        return max(conteo.items(), key=lambda elemento: elemento[1])
+
+    fortalezas_todas = [
+        texto for item in candidatos for texto in item['fortalezas']
+    ]
+    brechas_todas = [
+        texto for item in candidatos for texto in item['brechas']
+    ]
+    fortaleza_comun, fortaleza_frecuencia = _insight_mas_frecuente(
+        [fortalezas_todas]
+    )
+    brecha_comun, brecha_frecuencia = _insight_mas_frecuente([brechas_todas])
+    mejor_candidato = (
+        candidatos[0]
+        if candidatos and candidatos[0]['puntaje'] is not None
+        else None
+    )
+
     maximo_dimension = max(dimensiones.values()) if dimensiones else 0
     barras_dimensiones = [
         {
@@ -1384,6 +1411,15 @@ def _tablero_fabric(plaza, criterios='', perfil_objetivo=''):
             round(sum(matches_validos) / len(matches_validos), 1)
             if matches_validos else None
         ),
+        'insights': {
+            'mejor_candidato': mejor_candidato,
+            'fortaleza_comun': fortaleza_comun,
+            'fortaleza_frecuencia': fortaleza_frecuencia,
+            'brecha_comun': brecha_comun,
+            'brecha_frecuencia': brecha_frecuencia,
+            'total_fortalezas': len(fortalezas_todas),
+            'total_brechas': len(brechas_todas),
+        },
         'palabras_clave_perfil': palabras_clave,
         'dimensiones': barras_dimensiones,
         'recomendaciones': barras_recomendaciones,

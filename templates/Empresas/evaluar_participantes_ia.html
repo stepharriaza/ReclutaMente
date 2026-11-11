@@ -607,8 +607,8 @@
                 <div class="space-y-5">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
-                            <h3 class="text-sm font-bold text-gray-900">Tablero de resultados</h3>
-                            <p class="text-xs text-gray-500">Datos guardados de esta vacante · Actualizado {{ tablero_fabric.actualizado_en }}</p>
+                            <h3 class="text-sm font-bold text-gray-900">Resumen ejecutivo de IA</h3>
+                            <p class="text-xs text-gray-500">Insights generados por la evaluación · Actualizado {{ tablero_fabric.actualizado_en }}</p>
                         </div>
                         {% if fabric_embed_url %}
                         <a href="{{ fabric_embed_url }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center bg-white border border-cyan-300 text-cyan-700 hover:bg-cyan-50 font-semibold px-4 py-2 rounded-lg text-xs transition">
@@ -616,6 +616,36 @@
                         </a>
                         {% endif %}
                     </div>
+
+                    {% if tablero_fabric.insights.mejor_candidato %}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4">
+                            <p class="text-[11px] uppercase tracking-wider font-semibold text-indigo-500">Candidato sugerido</p>
+                            <p class="mt-1 text-base font-bold text-gray-900 truncate">{{ tablero_fabric.insights.mejor_candidato.nombre }}</p>
+                            <p class="text-xs text-indigo-700">{{ tablero_fabric.insights.mejor_candidato.puntaje }} pts · {{ tablero_fabric.insights.mejor_candidato.recomendacion }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4">
+                            <p class="text-[11px] uppercase tracking-wider font-semibold text-emerald-600">Fortaleza más repetida</p>
+                            <p class="mt-1 text-sm font-semibold text-gray-900 line-clamp-2">{{ tablero_fabric.insights.fortaleza_comun|default:"Sin datos" }}</p>
+                            {% if tablero_fabric.insights.fortaleza_frecuencia > 1 %}
+                            <p class="text-xs text-emerald-700">{{ tablero_fabric.insights.fortaleza_frecuencia }} de {{ tablero_fabric.insights.total_fortalezas }} evaluaciones</p>
+                            {% endif %}
+                        </div>
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50/40 p-4">
+                            <p class="text-[11px] uppercase tracking-wider font-semibold text-amber-600">Brecha más común</p>
+                            <p class="mt-1 text-sm font-semibold text-gray-900 line-clamp-2">{{ tablero_fabric.insights.brecha_comun|default:"Sin datos" }}</p>
+                            {% if tablero_fabric.insights.brecha_frecuencia > 1 %}
+                            <p class="text-xs text-amber-700">{{ tablero_fabric.insights.brecha_frecuencia }} de {{ tablero_fabric.insights.total_brechas }} evaluaciones</p>
+                            {% endif %}
+                        </div>
+                        <div class="rounded-2xl border border-purple-200 bg-purple-50/40 p-4">
+                            <p class="text-[11px] uppercase tracking-wider font-semibold text-purple-600">Ajuste promedio al perfil</p>
+                            <p class="mt-1 text-2xl font-bold text-gray-900">{{ tablero_fabric.match_perfil_promedio|default_if_none:"—" }}%</p>
+                            <p class="text-xs text-purple-700">Basado en los criterios de la vacante</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
 
                     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -625,11 +655,7 @@
                             <div>
                                 <p class="text-[11px] uppercase tracking-wider font-semibold text-indigo-500">Participante seleccionado</p>
                                 <p id="fabric-seleccionado-nombre" class="mt-1 text-lg font-bold text-gray-900">{{ tablero_fabric.candidatos.0.nombre }}</p>
-                                <p class="text-xs text-indigo-800 mt-0.5">Haz clic en un participante para cambiar los resultados al instante.</p>
-                                <p class="mt-1 text-xs text-indigo-700">
-                                    <span class="font-semibold">Sugerencia (mejor puntaje):</span>
-                                    {{ tablero_fabric.candidatos.0.nombre }}{% if tablero_fabric.candidatos.0.puntaje is not None %} · {{ tablero_fabric.candidatos.0.puntaje }} pts{% endif %}
-                                </p>
+                                <p class="text-xs text-indigo-800 mt-0.5">Haz clic en un participante para ver su informe completo.</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-[11px] uppercase tracking-wider font-semibold text-indigo-500">Puntaje IA</p>
@@ -693,6 +719,11 @@
                     {% endif %}
 
                     <div data-panel="todos" class="space-y-4" {% if tablero_fabric.candidato_inicial %}hidden{% endif %}>
+                    <div class="flex items-center gap-2">
+                        <span class="h-px flex-1 bg-gray-200"></span>
+                        <span class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Datos técnicos para el informe de Fabric</span>
+                        <span class="h-px flex-1 bg-gray-200"></span>
+                    </div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         <div class="rounded-2xl border border-gray-200 bg-gray-50/50 p-4">
                             <p class="text-[11px] uppercase tracking-wider font-semibold text-gray-400">Candidatos</p>
